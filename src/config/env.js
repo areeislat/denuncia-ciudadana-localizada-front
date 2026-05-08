@@ -49,11 +49,7 @@ export const validateEnvironment = () => {
     const message = `Variables de entorno faltantes: ${missing.join(', ')}. 
     Copia .env.example a .env.local y completa los valores.`;
     
-    if (import.meta.env.PROD) {
-      throw new Error(message);
-    } else {
-      console.warn('⚠️ ' + message);
-    }
+    console.warn('⚠️ ' + message);
   }
 };
 
