@@ -8,6 +8,7 @@ export default function Registro() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -20,11 +21,53 @@ export default function Registro() {
 
   const [validationErrors, setValidationErrors] = useState({});
 
+  const formatFullName = (name) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const formatPhone = (value) => {
+    // Remove all non-numeric characters except +
+    const numbers = value.replace(/[^\d+]/g, '');
+    
+    // Always start with +56 9
+    let formatted = '+56 9 ';
+    const userNumbers = numbers.replace(/^\+?569|^\+?56|^\+?/, '');
+    
+    if (userNumbers.length > 0) {
+      formatted += userNumbers.substring(0, 4);
+      if (userNumbers.length > 4) {
+        formatted += ' ' + userNumbers.substring(4, 8);
+      }
+    } else if (value.includes('+') && !value.includes('56')) {
+      // If user typing starting with + but not 56 yet
+      return value;
+    }
+    
+    // Return empty if empty, otherwise formatted
+    return value ? formatted.trim() : '';
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    let finalValue = value;
+    
+    if (name === 'fullName') {
+      // Only allow letters, spaces, hyphens, and acentos
+      if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s-]*$/.test(value)) {
+        return; // Reject invalid characters
+      }
+      finalValue = formatFullName(value);
+    } else if (name === 'phone') {
+        finalValue = formatPhone(value);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === 'checkbox' ? checked : finalValue,
     }));
     // Limpiar error del campo al escribir
     if (validationErrors[name]) {
@@ -37,6 +80,12 @@ export default function Registro() {
 
     if (!formData.fullName.trim()) {
       errors.fullName = 'El nombre es requerido';
+    } else if (formData.fullName.trim().split(' ').length < 2) {
+      errors.fullName = 'Por favor ingresa al menos un nombre y un apellido';
+    }
+
+    if (formData.phone && !/^\+56 9 \d{4} \d{4}$/.test(formData.phone)) {
+        errors.phone = 'Teléfono no válido (ej: +56 9 1234 5678)';
     }
 
     if (!formData.email.trim()) {
@@ -49,8 +98,8 @@ export default function Registro() {
       errors.password = 'La contraseña es requerida';
     } else if (formData.password.length < 8) {
       errors.password = 'Mínimo 8 caracteres';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      errors.password = 'Debe incluir mayúscula, minúscula y número';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}/.test(formData.password)) {
+      errors.password = 'Debe incluir mayúscula, minúscula, número y símbolo';
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -204,7 +253,7 @@ export default function Registro() {
                   <span className="material-symbols-outlined text-xl">phone</span>
                 </div>
                 <input
-                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  className={`block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm ${validationErrors.phone ? 'ring-2 ring-red-400' : ''}`}
                   placeholder="+56 9 1234 5678"
                   type="tel"
                   name="phone"
@@ -214,6 +263,9 @@ export default function Registro() {
                   autoComplete="tel"
                 />
               </div>
+              {validationErrors.phone && (
+                <p className="text-xs text-red-500 mt-1 ml-1">{validationErrors.phone}</p>
+              )}
             </div>
 
             {/* Contraseña */}
@@ -263,15 +315,24 @@ export default function Registro() {
                   <span className="material-symbols-outlined text-xl">lock</span>
                 </div>
                 <input
-                  className={`block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm ${validationErrors.confirmPassword ? 'ring-2 ring-red-400' : ''}`}
+                  className={`block w-full pl-11 pr-10 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm ${validationErrors.confirmPassword ? 'ring-2 ring-red-400' : ''}`}
                   placeholder="Repite tu contraseña"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={loading || success}
                   autoComplete="new-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#424752] hover:text-[#003a7a]"
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
               {validationErrors.confirmPassword && (
                 <p className="text-xs text-red-500 mt-1 ml-1">{validationErrors.confirmPassword}</p>
@@ -288,15 +349,11 @@ export default function Registro() {
                 className="mt-1 accent-[#0050A5] w-4 h-4 rounded"
                 disabled={loading || success}
               />
-              <span className={`text-xs ${validationErrors.acceptTerms ? 'text-red-500' : 'text-[#424752]'}`}>
+            <span className={`text-xs ${validationErrors.acceptTerms ? 'text-red-500 font-bold' : 'text-[#424752]'}`}>
                 Acepto los{' '}
-                <a href="#" className="text-[#003a7a] font-bold hover:underline">
-                  Términos de Uso
-                </a>{' '}
-                y la{' '}
-                <a href="#" className="text-[#003a7a] font-bold hover:underline">
-                  Política de Privacidad
-                </a>
+                <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="text-[#003a7a] font-bold hover:underline">
+                  Términos de Uso y la Política de Privacidad
+                </Link>
               </span>
             </label>
 
