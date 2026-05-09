@@ -13,15 +13,15 @@ export default function Footer() {
         <div>
           <h4 className="font-headline font-bold text-white text-sm mb-3">Enlaces</h4>
           <div className="flex flex-col gap-2">
-            <a href="#" className="text-slate-400 hover:text-white text-sm">
-              Términos de Uso
-            </a>
-            <a href="#" className="text-slate-400 hover:text-white text-sm">
-              Privacidad
-            </a>
-            <a href="#" className="text-slate-400 hover:text-white text-sm">
+            <Link to="/terminos" className="text-slate-400 hover:text-white text-sm">
+              Términos de Uso y Privacidad
+            </Link>
+            <Link to="/transparencia" className="text-slate-400 hover:text-white text-sm">
               Transparencia
-            </a>
+            </Link>
+            <Link to="/ayuda" className="text-slate-400 hover:text-white text-sm">
+              Ayuda
+            </Link>
           </div>
         </div>
         <div>
@@ -29,12 +29,6 @@ export default function Footer() {
           <div className="flex flex-col gap-2">
             <Link to="/login" className="text-slate-400 hover:text-white text-sm">
               Ingresar al Sistema
-            </Link>
-            <Link to="/ciudadano" className="text-slate-400 hover:text-white text-sm">
-              Portal Ciudadano
-            </Link>
-            <Link to="/panel" className="text-slate-400 hover:text-white text-sm">
-              Panel Municipal
             </Link>
           </div>
         </div>
