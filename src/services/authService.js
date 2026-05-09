@@ -8,6 +8,20 @@ import { API_CONFIG } from '../config/env';
 const BASE_URL = API_CONFIG.baseURL;
 
 /**
+ * Obtener la URL base para las requests.
+ * En producción usa rutas relativas (proxy de Vercel).
+ * En desarrollo usa la URL completa del backend.
+ */
+const getRequestUrl = (path) => {
+  if (import.meta.env.PROD) {
+    // En producción, usar ruta relativa para pasar por el proxy de Vercel
+    return path;
+  }
+  // En desarrollo, usar la URL completa del backend
+  return `${BASE_URL}${path}`;
+};
+
+/**
  * Login de usuario
  * @param {string} email
  * @param {string} password
@@ -16,7 +30,7 @@ const BASE_URL = API_CONFIG.baseURL;
 export const login = async (email, password) => {
   let response;
   try {
-    response = await fetch(`${BASE_URL}/api/auth/login`, {
+    response = await fetch(getRequestUrl('/api/auth/login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +71,7 @@ export const login = async (email, password) => {
 export const register = async (userData) => {
   let response;
   try {
-    response = await fetch(`${BASE_URL}/api/auth/register`, {
+    response = await fetch(getRequestUrl('/api/auth/register'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
