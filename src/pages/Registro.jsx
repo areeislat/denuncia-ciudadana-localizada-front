@@ -300,7 +300,7 @@ export default function Registro() {
               {validationErrors.password && (
                 <p className="text-xs text-red-500 mt-1 ml-1">{validationErrors.password}</p>
               )}
-              {formData.password && !validationErrors.password && (
+              {formData.password && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}/.test(formData.password) && !validationErrors.password && (
                 <p className="text-xs text-green-600 mt-1 ml-1">✓ Contraseña válida</p>
               )}
             </div>
