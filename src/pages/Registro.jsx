@@ -12,6 +12,7 @@ export default function Registro() {
 
   const [formData, setFormData] = useState({
     fullName: '',
+    rut: '',
     email: '',
     phone: '',
     password: '',
@@ -50,6 +51,48 @@ export default function Registro() {
     return value ? formatted.trim() : '';
   };
 
+  const formatRut = (value) => {
+    // Remove all characters except numbers and K/k
+    let clean = value.replace(/[^0-9kK]/g, '').toUpperCase();
+    
+    if (clean.length === 0) return '';
+    if (clean.length === 1) return clean;
+
+    const body = clean.slice(0, -1);
+    const dv = clean.slice(-1);
+    
+    // Add dots to the body
+    let formattedBody = '';
+    for (let i = body.length; i > 0; i -= 3) {
+      const chunk = body.slice(Math.max(0, i - 3), i);
+      formattedBody = chunk + (formattedBody ? '.' + formattedBody : '');
+    }
+
+    return `${formattedBody}-${dv}`;
+  };
+
+  const validateRut = (rut) => {
+    if (!rut) return false;
+    const clean = rut.replace(/[^0-9K]/ig, '').toUpperCase();
+    if (clean.length < 8) return false;
+
+    const r = clean.slice(0, -1);
+    const dv = clean.slice(-1);
+    let suma = 0;
+    let multiplo = 2;
+
+    for (let i = r.length - 1; i >= 0; i--) {
+        suma += parseInt(r.charAt(i)) * multiplo;
+        if (multiplo < 7) multiplo++;
+        else multiplo = 2;
+    }
+
+    const dvEsperado = 11 - (suma % 11);
+    const dvString = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+
+    return dv === dvString;
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
@@ -61,6 +104,8 @@ export default function Registro() {
         return; // Reject invalid characters
       }
       finalValue = formatFullName(value);
+    } else if (name === 'rut') {
+      finalValue = formatRut(value);
     } else if (name === 'phone') {
         finalValue = formatPhone(value);
     }
@@ -82,6 +127,12 @@ export default function Registro() {
       errors.fullName = 'El nombre es requerido';
     } else if (formData.fullName.trim().split(' ').length < 2) {
       errors.fullName = 'Por favor ingresa al menos un nombre y un apellido';
+    }
+
+    if (!formData.rut.trim()) {
+      errors.rut = 'El RUT es requerido';
+    } else if (!validateRut(formData.rut)) {
+      errors.rut = 'RUT inválido (ej: 12.345.678-9)';
     }
 
     if (formData.phone && !/^\+56 9 \d{4} \d{4}$/.test(formData.phone)) {
@@ -126,6 +177,8 @@ export default function Registro() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
+        rut: formData.rut,
+        phone: formData.phone // As req. in API
       });
 
       setSuccess(true);
@@ -215,6 +268,31 @@ export default function Registro() {
               </div>
               {validationErrors.fullName && (
                 <p className="text-xs text-red-500 mt-1 ml-1">{validationErrors.fullName}</p>
+              )}
+            </div>
+
+            {/* RUT */}
+            <div>
+              <label className="block font-headline text-xs font-bold text-[#424752] ml-1 uppercase tracking-wider mb-1.5">
+                RUT
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#424752]">
+                  <span className="material-symbols-outlined text-xl">badge</span>
+                </div>
+                <input
+                  className={`block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm ${validationErrors.rut ? 'ring-2 ring-red-400' : ''}`}
+                  placeholder="Ej: 12.345.678-9"
+                  type="text"
+                  name="rut"
+                  value={formData.rut}
+                  onChange={handleChange}
+                  disabled={loading || success}
+                  maxLength="12"
+                />
+              </div>
+              {validationErrors.rut && (
+                <p className="text-xs text-red-500 mt-1 ml-1">{validationErrors.rut}</p>
               )}
             </div>
 

@@ -80,6 +80,8 @@ export const register = async (userData) => {
         email: userData.email,
         password: userData.password,
         fullName: userData.fullName,
+        rut: userData.rut,
+        phone: userData.phone,
         active: true,
       }),
     });
