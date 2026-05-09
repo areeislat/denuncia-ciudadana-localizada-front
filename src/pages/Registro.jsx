@@ -77,7 +77,6 @@ export default function Registro() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        roleId: 1, // Ciudadano
       });
 
       setSuccess(true);
