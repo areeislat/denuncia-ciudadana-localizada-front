@@ -340,22 +340,30 @@ export default function Registro() {
             </div>
 
             {/* Términos */}
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                name="acceptTerms"
-                checked={formData.acceptTerms}
-                onChange={handleChange}
-                className="mt-1 accent-[#0050A5] w-4 h-4 rounded"
-                disabled={loading || success}
-              />
-            <span className={`text-xs ${validationErrors.acceptTerms ? 'text-red-500 font-bold' : 'text-[#424752]'}`}>
-                Acepto los{' '}
-                <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="text-[#003a7a] font-bold hover:underline">
-                  Términos de Uso y la Política de Privacidad
-                </Link>
-              </span>
-            </label>
+            <div>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="acceptTerms"
+                  checked={formData.acceptTerms}
+                  onChange={handleChange}
+                  className="accent-[#0050A5] w-4 h-4 rounded cursor-pointer"
+                  disabled={loading || success}
+                />
+                <span className="text-xs text-[#424752]">
+                  Acepto los{' '}
+                  <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="text-[#003a7a] font-bold hover:underline">
+                    Términos de Uso y la Política de Privacidad
+                  </Link>
+                </span>
+              </label>
+              {validationErrors.acceptTerms && (
+                <div className="mt-2 ml-6 p-2 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">info</span>
+                  <span>{validationErrors.acceptTerms}</span>
+                </div>
+              )}
+            </div>
 
             {/* Submit button */}
             <button

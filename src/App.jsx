@@ -8,6 +8,8 @@ import CiudadanoCrear from './pages/CiudadanoCrear';
 import CiudadanoReportes from './pages/CiudadanoReportes';
 import Panel from './pages/Panel';
 import TerminosYPrivacidad from './pages/TerminosYPrivacidad';
+import Transparencia from './pages/Transparencia';
+import Ayuda from './pages/Ayuda';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
         <Route path="/ciudadano/reportes" element={<CiudadanoReportes />} />
         <Route path="/panel" element={<Panel />} />
         <Route path="/terminos" element={<TerminosYPrivacidad />} />
+        <Route path="/transparencia" element={<Transparencia />} />
+        <Route path="/ayuda" element={<Ayuda />} />
       </Routes>
     </Router>
   );
