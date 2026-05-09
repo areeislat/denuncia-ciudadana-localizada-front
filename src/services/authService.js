@@ -14,18 +14,28 @@ const BASE_URL = API_CONFIG.baseURL;
  * @returns {Promise<{token: string, user: object}>}
  */
 export const login = async (email, password) => {
-  const response = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch (networkError) {
+    throw new Error('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+  }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(`Error del servidor (${response.status}). Intenta más tarde.`);
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || 'Error al iniciar sesión');
+    throw new Error(data.message || data.error || 'Credenciales incorrectas.');
   }
 
   // Guardar token y datos del usuario
@@ -45,24 +55,43 @@ export const login = async (email, password) => {
  * @returns {Promise<object>}
  */
 export const register = async (userData) => {
-  const response = await fetch(`${BASE_URL}/api/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email: userData.email,
-      password: userData.password,
-      fullName: userData.fullName,
-      roleId: userData.roleId || 1, // 1 = Ciudadano por defecto
-      active: true,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: userData.email,
+        password: userData.password,
+        fullName: userData.fullName,
+        roleId: userData.roleId || 1, // 1 = Ciudadano por defecto
+        active: true,
+      }),
+    });
+  } catch (networkError) {
+    throw new Error('No se pudo conectar con el servidor. Verifica tu conexión a internet o intenta más tarde.');
+  }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    if (response.status === 403) {
+      throw new Error('El registro no está habilitado en este momento. Contacta al administrador.');
+    }
+    throw new Error(`Error del servidor (${response.status}). Intenta más tarde.`);
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || 'Error al registrar usuario');
+    if (response.status === 403) {
+      throw new Error('El registro no está habilitado en este momento. Contacta al administrador.');
+    }
+    if (response.status === 409) {
+      throw new Error('Ya existe una cuenta con ese email.');
+    }
+    throw new Error(data.message || data.error || 'Error al registrar usuario.');
   }
 
   return data;
