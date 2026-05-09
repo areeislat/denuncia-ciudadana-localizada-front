@@ -1,6 +1,41 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { login } from '../services/authService';
 
 export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email || !password) {
+      setError('Por favor completa todos los campos.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await login(email, password);
+
+      // Redirigir según el rol del usuario
+      if (data.user && (data.user.roleId >= 2 || data.user.roleName === 'ADMIN' || data.user.roleName === 'MUNICIPAL_OFFICER')) {
+        navigate('/panel');
+      } else {
+        navigate('/ciudadano');
+      }
+    } catch (err) {
+      setError(err.message || 'Credenciales incorrectas. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4"
@@ -36,7 +71,15 @@ export default function Login() {
             </Link>
           </div>
 
-          <form className="space-y-5">
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+              <span className="material-symbols-outlined text-red-500 text-lg">error</span>
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="block font-headline text-xs font-bold text-[#424752] ml-1 uppercase tracking-wider mb-1.5">
                 Email
@@ -49,6 +92,10 @@ export default function Login() {
                   className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
                   placeholder="nombre@ejemplo.cl"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -68,29 +115,44 @@ export default function Login() {
                 <input
                   className="block w-full pl-11 pr-10 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
                   placeholder="••••••••"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  autoComplete="current-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#424752] hover:text-[#003a7a]"
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
             </div>
 
-            {/* Demo links */}
-            <div className="space-y-2">
-              <p className="text-[9px] text-[#737783] font-bold uppercase tracking-wider text-center">
-                Demo — Ingresar como:
-              </p>
-              <Link
-                to="/ciudadano"
-                className="w-full bg-[#0050A5] text-white font-headline font-bold py-3.5 rounded-xl shadow-lg hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <span className="material-symbols-outlined text-lg">person</span> Ciudadano (Nivel 1)
-              </Link>
-              <Link
-                to="/panel"
-                className="w-full bg-[#001A33] text-white font-headline font-bold py-3.5 rounded-xl shadow-lg hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <span className="material-symbols-outlined text-lg">badge</span> Funcionario / Admin (Nivel 2-5)
-              </Link>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#0050A5] text-white font-headline font-bold py-3.5 rounded-xl shadow-lg shadow-blue-900/20 hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Ingresando...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-lg">login</span>
+                  Ingresar
+                </>
+              )}
+            </button>
           </form>
 
           <div className="relative my-6">
@@ -101,13 +163,14 @@ export default function Login() {
               <span className="bg-white px-4 text-[#737783] font-bold tracking-widest">O entrar con</span>
             </div>
           </div>
-          <Link
-            to="/ciudadano"
+          <button
+            type="button"
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-[#c2c6d4] rounded-xl hover:bg-[#f5f3f3] transition-colors"
+            onClick={() => alert('Clave Única no disponible aún')}
           >
             <span className="material-symbols-outlined text-[#003a7a] fill-icon">fingerprint</span>
             <span className="text-sm font-semibold font-headline">Clave Única</span>
-          </Link>
+          </button>
         </div>
 
         <footer className="text-center">
