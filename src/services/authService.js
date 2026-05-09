@@ -71,7 +71,7 @@ export const login = async (email, password) => {
 export const register = async (userData) => {
   let response;
   try {
-    response = await fetch(getRequestUrl('/api/users/register'), {
+    response = await fetch(getRequestUrl('/api/users'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,7 +80,8 @@ export const register = async (userData) => {
         email: userData.email,
         password: userData.password,
         fullName: userData.fullName,
-        rut: userData.rut,
+        roleName: "CITIZEN",
+        rut: userData.rut.replace(/[^0-9kK]/g, '').toUpperCase(),
         phone: userData.phone,
         active: true,
       }),
