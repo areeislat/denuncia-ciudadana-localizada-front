@@ -71,7 +71,7 @@ export const login = async (email, password) => {
 export const register = async (userData) => {
   let response;
   try {
-    response = await fetch(getRequestUrl('/api/auth/register'), {
+    response = await fetch(getRequestUrl('/api/users/register'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
