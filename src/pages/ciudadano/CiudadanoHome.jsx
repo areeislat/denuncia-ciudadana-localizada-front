@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import MapComponent from '../components/MapComponent';
+import MapComponent from '../../components/MapComponent';
 
 const mockMarkers = [
   { lat: -33.423, lng: -70.615, title: 'Bache en cruce peatonal', status: 'Pendiente', color: '#dc2626', n: 12 },

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import MapComponent from '../components/MapComponent';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import MapComponent from '../../components/MapComponent';
 
 const mockMarkers = [
   { lat: -33.423, lng: -70.615, title: 'Bache en cruce peatonal', color: '#dc2626', n: 12 },

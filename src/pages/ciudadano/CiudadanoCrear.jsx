@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import MapComponent from '../components/MapComponent';
+import MapComponent from '../../components/MapComponent';
 
 export default function CiudadanoCrear() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

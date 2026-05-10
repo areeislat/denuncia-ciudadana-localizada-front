@@ -1,6 +1,47 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import apiClient from '../../config/api';
+import useAuthStore from '../../store/authStore';
 
 export default function Login() {
+  const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
+
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const data = await apiClient.post('/api/auth/login', form);
+
+      // Guardar en Zustand + localStorage
+      login(data.token, data.user);
+
+      // Redirigir según rol
+      const rol = data.user.roleName;
+      if (rol === 'CITIZEN') {
+        navigate('/ciudadano');
+      } else {
+        navigate('/panel');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Credenciales incorrectas. Intenta nuevamente.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4"
@@ -36,7 +77,7 @@ export default function Login() {
             </Link>
           </div>
 
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="block font-headline text-xs font-bold text-[#424752] ml-1 uppercase tracking-wider mb-1.5">
                 Email
@@ -46,12 +87,17 @@ export default function Login() {
                   <span className="material-symbols-outlined text-xl">mail</span>
                 </div>
                 <input
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
                   className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
                   placeholder="nombre@ejemplo.cl"
                   type="email"
                 />
               </div>
             </div>
+
             <div>
               <div className="flex justify-between items-center ml-1 mb-1.5">
                 <label className="block font-headline text-xs font-bold text-[#424752] uppercase tracking-wider">
@@ -66,6 +112,10 @@ export default function Login() {
                   <span className="material-symbols-outlined text-xl">lock</span>
                 </div>
                 <input
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
                   className="block w-full pl-11 pr-10 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
                   placeholder="••••••••"
                   type="password"
@@ -73,24 +123,28 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Demo links */}
-            <div className="space-y-2">
-              <p className="text-[9px] text-[#737783] font-bold uppercase tracking-wider text-center">
-                Demo — Ingresar como:
-              </p>
-              <Link
-                to="/ciudadano"
-                className="w-full bg-[#0050A5] text-white font-headline font-bold py-3.5 rounded-xl shadow-lg hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <span className="material-symbols-outlined text-lg">person</span> Ciudadano (Nivel 1)
-              </Link>
-              <Link
-                to="/panel"
-                className="w-full bg-[#001A33] text-white font-headline font-bold py-3.5 rounded-xl shadow-lg hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <span className="material-symbols-outlined text-lg">badge</span> Funcionario / Admin (Nivel 2-5)
-              </Link>
-            </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-4 py-3">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#0050A5] text-white font-headline font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                  Ingresando...
+                </>
+              ) : (
+                <>
+                  Ingresar <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                </>
+              )}
+            </button>
           </form>
 
           <div className="relative my-6">
@@ -101,13 +155,13 @@ export default function Login() {
               <span className="bg-white px-4 text-[#737783] font-bold tracking-widest">O entrar con</span>
             </div>
           </div>
-          <Link
-            to="/ciudadano"
+          <button
+            type="button"
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-[#c2c6d4] rounded-xl hover:bg-[#f5f3f3] transition-colors"
           >
             <span className="material-symbols-outlined text-[#003a7a] fill-icon">fingerprint</span>
             <span className="text-sm font-semibold font-headline">Clave Única</span>
-          </Link>
+          </button>
         </div>
 
         <footer className="text-center">

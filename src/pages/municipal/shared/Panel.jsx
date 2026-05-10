@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import MapComponent from '../components/MapComponent';
+import MapComponent from '../../../components/MapComponent';
 
 const panelMarkers = [
   { lat: -33.422, lng: -70.615, title: 'Cluster 1', color: '#dc2626', n: 12 },
