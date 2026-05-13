@@ -31,8 +31,10 @@ export default function Login() {
       const rol = data.user.roleName;
       if (rol === 'CITIZEN') {
         navigate('/ciudadano');
+      } else if (['MUNICIPAL_OFFICER', 'ADMIN_MUNICIPAL', 'SUPER_ADMIN'].includes(rol)) {
+        navigate('/municipal/dashboard');
       } else {
-        navigate('/panel');
+        navigate('/');
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Credenciales incorrectas. Intenta nuevamente.';
