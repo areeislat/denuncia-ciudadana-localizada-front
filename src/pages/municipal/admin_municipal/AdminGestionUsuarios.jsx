@@ -1,38 +1,33 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import useAuthStore from '../../../store/authStore';
+import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
-const API_URL_PUBLIC = 'http://localhost:8087/api/users'; // POST crear ciudadano sin token
-const API_URL = 'http://localhost:8080/api/users';   
+const API_URL = 'http://localhost:8080/api/users';
 
 const roleConfig = {
-  CITIZEN:          { label: 'Ciudadano',            clase: 'bg-[#c5dcfd] text-[#003a7a]'    },
-  MUNICIPAL_OFFICER:{ label: 'Funcionario Municipal', clase: 'bg-amber-100 text-amber-700'    },
+  CITIZEN:           { label: 'Ciudadano',            clase: 'bg-[#c5dcfd] text-[#003a7a]'  },
+  MUNICIPAL_OFFICER: { label: 'Funcionario Municipal', clase: 'bg-amber-100 text-amber-700'  },
 };
 
 export default function AdminGestionUsuarios() {
-  const { user, token, logout } = useAuthStore();
+  const { token, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [usuarios, setUsuarios] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
-  const [busqueda, setBusqueda] = useState('');
+
+  const [usuarios, setUsuarios]         = useState([]);
+  const [cargando, setCargando]         = useState(true);
+  const [error, setError]               = useState(null);
+  const [busqueda, setBusqueda]         = useState('');
   const [filtroActivo, setFiltroActivo] = useState('Todos');
-  const [filtroRol, setFiltroRol] = useState('Todos');
-  const [modalEliminar, setModalEliminar] = useState(null);
-  const [eliminando, setEliminando] = useState(false);
+  const [filtroRol, setFiltroRol]       = useState('Todos');
+  const [modalToggle, setModalToggle]   = useState(null);
+  const [toggling, setToggling]         = useState(false);
+  const [modalEditar, setModalEditar]   = useState(null);
+  const [rolEditado, setRolEditado]     = useState('');
+  const [guardando, setGuardando]       = useState(false);
+  const [errorEditar, setErrorEditar]   = useState(null);
 
-  const initials = user?.fullName
-    ?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  // Cargar CITIZENS y OFFICERS
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -41,18 +36,13 @@ export default function AdminGestionUsuarios() {
         const { data } = await axios.get(API_URL, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        // Admin municipal gestiona CITIZEN y MUNICIPAL_OFFICER
         const filtered = data.filter((u) =>
           u.roleName === 'CITIZEN' || u.roleName === 'MUNICIPAL_OFFICER'
         );
         setUsuarios(filtered);
       } catch (err) {
-        if (err.response?.status === 401) {
-          logout();
-          navigate('/login');
-        } else {
-          setError('No se pudo cargar la lista de usuarios.');
-        }
+        if (err.response?.status === 401) { logout(); navigate('/login'); }
+        else setError('No se pudo cargar la lista de usuarios.');
       } finally {
         setCargando(false);
       }
@@ -60,38 +50,50 @@ export default function AdminGestionUsuarios() {
     fetchUsuarios();
   }, [token]);
 
-  const handleEliminar = async () => {
-    if (!modalEliminar) return;
+  const handleGuardarRol = async () => {
     try {
-      setEliminando(true);
-      await axios.delete(`${API_URL}/${modalEliminar.userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsuarios((prev) => prev.filter((u) => u.userId !== modalEliminar.userId));
-      setModalEliminar(null);
+      setGuardando(true);
+      setErrorEditar(null);
+      const { data } = await axios.put(`${API_URL}/${modalEditar.userId}`,
+        { roleName: rolEditado },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUsuarios((prev) => prev.map((u) => u.userId === data.userId ? data : u));
+      setModalEditar(null);
     } catch (err) {
-      if (err.response?.status === 401) {
-        logout();
-        navigate('/login');
-      } else {
-        setError('No se pudo eliminar el usuario.');
-      }
+      if (err.response?.status === 401) { logout(); navigate('/login'); }
+      else setErrorEditar('No se pudo actualizar el rol.');
     } finally {
-      setEliminando(false);
+      setGuardando(false);
+    }
+  };
+
+  const handleToggleActivo = async () => {
+    if (!modalToggle) return;
+    try {
+      setToggling(true);
+      const { data } = await axios.put(`${API_URL}/${modalToggle.userId}`,
+        { active: !modalToggle.active },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUsuarios((prev) => prev.map((u) => u.userId === data.userId ? data : u));
+      setModalToggle(null);
+    } catch (err) {
+      if (err.response?.status === 401) { logout(); navigate('/login'); }
+      else setError('No se pudo actualizar el usuario.');
+    } finally {
+      setToggling(false);
     }
   };
 
   const usuariosFiltrados = usuarios.filter((u) => {
-    const matchBusqueda = busqueda === '' ||
+    const matchBusqueda  = busqueda === '' ||
       u.fullName?.toLowerCase().includes(busqueda.toLowerCase()) ||
       u.email?.toLowerCase().includes(busqueda.toLowerCase());
-    const matchActivo =
-      filtroActivo === 'Todos' ||
+    const matchActivo    = filtroActivo === 'Todos' ||
       (filtroActivo === 'Activos' && u.active) ||
       (filtroActivo === 'Inactivos' && !u.active);
-    const matchRol =
-      filtroRol === 'Todos' ||
-      u.roleName === filtroRol;
+    const matchRol       = filtroRol === 'Todos' || u.roleName === filtroRol;
     return matchBusqueda && matchActivo && matchRol;
   });
 
@@ -108,121 +110,20 @@ export default function AdminGestionUsuarios() {
 
   return (
     <div>
-      {/* SIDEBAR desktop */}
-      <aside className="hidden md:flex flex-col h-screen w-60 fixed left-0 top-0 bg-[#001A33] py-5 z-50">
-        <div className="px-5 mb-6">
-          <h1 className="text-base font-bold text-white font-headline">DESIGEO</h1>
-          <p className="text-slate-400 text-[10px] mt-0.5">Panel de Gestión</p>
-        </div>
-        <div className="px-4 mb-5">
-          <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
-            <div className="w-9 h-9 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold shrink-0">{initials}</div>
-            <div className="min-w-0">
-              <p className="text-white text-xs font-bold truncate">{user?.fullName}</p>
-              <p className="text-slate-400 text-[10px]">Administrador Municipal</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-0.5 px-2 overflow-y-auto">
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">Gestión</p>
-          <Link to="/municipal/dashboard" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">dashboard</span>
-            <span className="font-headline font-medium">Dashboard</span>
-          </Link>
-          <Link to="/municipal/gestion" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">assignment</span>
-            <span className="font-headline font-medium">Gestión Reportes</span>
-          </Link>
-          <Link to="/admin/usuarios" className="sidebar-link sidebar-active rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-white">
-            <span className="material-symbols-outlined text-lg fill-icon">group</span>
-            <span className="font-headline font-medium">Usuarios</span>
-          </Link>
-          <Link to="/municipal/estadisticas" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">bar_chart</span>
-            <span className="font-headline font-medium">Estadísticas</span>
-          </Link>
-          <Link to="/municipal/configuracion" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">settings</span>
-            <span className="font-headline font-medium">Configuración</span>
-          </Link>
-        </nav>
-        <div className="px-3 mt-auto">
-          <button onClick={handleLogout} className="text-slate-400 hover:text-white px-2 py-2 flex items-center gap-2 text-sm w-full">
-            <span className="material-symbols-outlined text-lg">logout</span>Cerrar Sesión
-          </button>
-        </div>
-      </aside>
+      <MunicipalSidebar />
 
-      {/* MOBILE HEADER */}
-      <header className="md:hidden bg-[#001A33] sticky top-0 z-50 shadow-lg px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setMobileMenuOpen(true)} className="text-white">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <span className="text-lg font-extrabold text-white font-headline">DESIGEO</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-white">notifications</span>
-          <div className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold">{initials}</div>
-        </div>
-      </header>
-
-      {/* MOBILE MENU */}
-      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
-        <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)}></div>
-        <div className="mobile-menu-panel">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-white font-headline font-bold">DESIGEO</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-white">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3 mb-4">
-            <div className="w-9 h-9 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold">{initials}</div>
-            <div>
-              <p className="text-white text-xs font-bold">{user?.fullName}</p>
-              <p className="text-slate-400 text-[10px]">Administrador Municipal</p>
-            </div>
-          </div>
-          <nav className="space-y-1">
-            <Link to="/municipal/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">dashboard</span>Dashboard
-            </Link>
-            <Link to="/municipal/gestion" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">assignment</span>Gestión Reportes
-            </Link>
-            <Link to="/admin/usuarios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-2.5 px-3 rounded-lg bg-white/10 text-sm">
-              <span className="material-symbols-outlined">group</span>Usuarios
-            </Link>
-            <div className="border-t border-white/10 my-3"></div>
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">logout</span>Cerrar sesión
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      {/* MAIN */}
       <main className="md:ml-60 p-4 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-[#1b1c1c] font-headline mb-1">Gestión de Usuarios</h2>
-            <p className="text-[#424752] text-sm">Funcionarios y ciudadanos de tu municipio.</p>
-          </div>
-          <Link
-            to="/admin/usuarios/crear"
-            className="flex items-center gap-2 bg-[#0050A5] text-white font-headline font-bold py-2.5 px-5 rounded-full text-sm hover:bg-[#003A7A] transition-colors shadow-md self-start"
-          >
-            <span className="material-symbols-outlined text-sm">person_add</span>Nuevo Usuario
-          </Link>
+        <div className="mb-6">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-[#1b1c1c] font-headline mb-1">Gestión de Usuarios</h2>
+          <p className="text-[#424752] text-sm">Funcionarios y ciudadanos de tu municipio.</p>
         </div>
 
-        {/* Resumen por rol */}
+        {/* KPIs */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'Total', value: conteoRol('Todos'), color: 'border-[#003a7a]', text: 'text-[#003a7a]' },
-            { label: 'Ciudadanos', value: conteoRol('CITIZEN'), color: 'border-[#0050A5]', text: 'text-[#0050A5]' },
-            { label: 'Funcionarios', value: conteoRol('MUNICIPAL_OFFICER'), color: 'border-amber-400', text: 'text-amber-600' },
+            { label: 'Total',        value: conteoRol('Todos'),              color: 'border-[#003a7a]', text: 'text-[#003a7a]' },
+            { label: 'Ciudadanos',   value: conteoRol('CITIZEN'),            color: 'border-[#0050A5]', text: 'text-[#0050A5]' },
+            { label: 'Funcionarios', value: conteoRol('MUNICIPAL_OFFICER'),  color: 'border-amber-400', text: 'text-amber-600' },
           ].map((item) => (
             <div key={item.label} className={`bg-white rounded-xl p-4 shadow-sm border-l-4 ${item.color}`}>
               <p className="text-[10px] font-bold text-[#737783] uppercase tracking-wider">{item.label}</p>
@@ -231,7 +132,7 @@ export default function AdminGestionUsuarios() {
           ))}
         </div>
 
-        {/* Búsqueda y filtros */}
+        {/* Filtros */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-[#f5f3f3] mb-6 flex flex-col md:flex-row gap-3">
           <div className="flex-1 flex items-center gap-2 border border-[#e4e2e2] rounded-lg px-3 py-2">
             <span className="material-symbols-outlined text-[#737783] text-sm">search</span>
@@ -258,9 +159,7 @@ export default function AdminGestionUsuarios() {
                 key={f}
                 onClick={() => setFiltroActivo(f)}
                 className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                  filtroActivo === f
-                    ? 'bg-[#003a7a] text-white'
-                    : 'bg-[#eae8e7] text-[#424752] hover:bg-[#dbd9d9]'
+                  filtroActivo === f ? 'bg-[#003a7a] text-white' : 'bg-[#eae8e7] text-[#424752] hover:bg-[#dbd9d9]'
                 }`}
               >
                 {f}
@@ -269,7 +168,6 @@ export default function AdminGestionUsuarios() {
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex items-center gap-3">
             <span className="material-symbols-outlined text-[#ba1a1a]">error</span>
@@ -308,9 +206,7 @@ export default function AdminGestionUsuarios() {
                 </thead>
                 <tbody className="divide-y divide-[#f5f3f3]">
                   {usuariosFiltrados.length === 0 && (
-                    <tr>
-                      <td colSpan="6" className="text-center text-[#424752] text-sm py-12">No hay usuarios que coincidan.</td>
-                    </tr>
+                    <tr><td colSpan="6" className="text-center text-[#424752] text-sm py-12">No hay usuarios que coincidan.</td></tr>
                   )}
                   {usuariosFiltrados.map((u) => {
                     const rol = roleConfig[u.roleName];
@@ -340,19 +236,21 @@ export default function AdminGestionUsuarios() {
                         <td className="px-5 py-3 text-xs text-[#737783]">{formatFecha(u.createdAt)}</td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <Link
-                              to={`/admin/usuarios/${u.userId}/editar`}
+                            <button
+                              onClick={() => { setModalEditar(u); setRolEditado(u.roleName); setErrorEditar(null); }}
                               className="text-[#003a7a] hover:bg-[#f5f3f3] p-1.5 rounded-lg transition-colors"
-                              title="Editar"
+                              title="Cambiar rol"
                             >
                               <span className="material-symbols-outlined text-sm">edit</span>
-                            </Link>
+                            </button>
                             <button
-                              onClick={() => setModalEliminar(u)}
-                              className="text-[#ba1a1a] hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                              title="Eliminar"
+                              onClick={() => setModalToggle(u)}
+                              className={`${u.active ? 'text-[#ba1a1a] hover:bg-red-50' : 'text-green-700 hover:bg-green-50'} p-1.5 rounded-lg transition-colors`}
+                              title={u.active ? 'Desactivar' : 'Activar'}
                             >
-                              <span className="material-symbols-outlined text-sm">delete</span>
+                              <span className="material-symbols-outlined text-sm">
+                                {u.active ? 'block' : 'check_circle'}
+                              </span>
                             </button>
                           </div>
                         </td>
@@ -389,17 +287,20 @@ export default function AdminGestionUsuarios() {
                       </span>
                     </div>
                     <div className="flex gap-2 mt-3">
-                      <Link
-                        to={`/admin/usuarios/${u.userId}/editar`}
+                      <button
+                        onClick={() => { setModalEditar(u); setRolEditado(u.roleName); setErrorEditar(null); }}
                         className="flex items-center gap-1 text-[#003a7a] border border-[#003a7a] font-bold py-1.5 px-3 rounded-full text-xs hover:bg-[#f5f3f3] transition-colors"
                       >
                         <span className="material-symbols-outlined text-sm">edit</span>Editar
-                      </Link>
+                      </button>
                       <button
-                        onClick={() => setModalEliminar(u)}
-                        className="flex items-center gap-1 text-[#ba1a1a] border border-[#ba1a1a] font-bold py-1.5 px-3 rounded-full text-xs hover:bg-red-50 transition-colors"
+                        onClick={() => setModalToggle(u)}
+                        className={`${u.active ? 'text-[#ba1a1a] hover:bg-red-50' : 'text-green-700 hover:bg-green-50'} p-1.5 rounded-lg transition-colors`}
+                        title={u.active ? 'Desactivar' : 'Activar'}
                       >
-                        <span className="material-symbols-outlined text-sm">delete</span>Eliminar
+                        <span className="material-symbols-outlined text-sm">
+                          {u.active ? 'block' : 'check_circle'}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -410,29 +311,74 @@ export default function AdminGestionUsuarios() {
         </div>
       </main>
 
-      {/* Modal eliminar */}
-      {modalEliminar && (
+      {/* Modal editar rol */}
+      {modalEditar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !eliminando && setModalEliminar(null)}></div>
+          <div className="absolute inset-0 bg-black/40" onClick={() => !guardando && setModalEditar(null)}></div>
           <div className="relative bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
-            <h3 className="font-headline font-extrabold text-[#1b1c1c] text-lg mb-2">¿Eliminar usuario?</h3>
-            <p className="text-sm text-[#424752] mb-6">
-              Estás a punto de eliminar a <span className="font-bold">{modalEliminar.fullName}</span>. Esta acción no se puede deshacer.
-            </p>
-            <div className="flex gap-3">
+            <h3 className="font-headline font-extrabold text-[#1b1c1c] text-lg mb-1">Cambiar Rol</h3>
+            <p className="text-sm text-[#424752] mb-4">{modalEditar.fullName}</p>
+            <div>
+              <label className="block text-xs font-bold text-[#424752] mb-1">Rol</label>
+              <select
+                value={rolEditado}
+                onChange={(e) => setRolEditado(e.target.value)}
+                className="w-full border border-[#e4e2e2] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#003a7a]"
+              >
+                <option value="CITIZEN">Ciudadano</option>
+                <option value="MUNICIPAL_OFFICER">Funcionario Municipal</option>
+              </select>
+            </div>
+            {errorEditar && <p className="text-xs text-[#ba1a1a] mt-3">{errorEditar}</p>}
+            <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setModalEliminar(null)}
-                disabled={eliminando}
+                onClick={() => setModalEditar(null)}
+                disabled={guardando}
                 className="flex-1 border border-[#e4e2e2] text-[#424752] font-headline font-bold py-2.5 rounded-full hover:bg-[#f5f3f3] transition-colors text-sm disabled:opacity-60"
               >
                 Cancelar
               </button>
               <button
-                onClick={handleEliminar}
-                disabled={eliminando}
-                className="flex-1 bg-[#ba1a1a] text-white font-headline font-bold py-2.5 rounded-full hover:bg-red-700 transition-colors text-sm disabled:opacity-60"
+                onClick={handleGuardarRol}
+                disabled={guardando}
+                className="flex-1 bg-[#003a7a] text-white font-headline font-bold py-2.5 rounded-full hover:bg-[#002a5a] transition-colors text-sm disabled:opacity-60"
               >
-                {eliminando ? 'Eliminando...' : 'Eliminar'}
+                {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalToggle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !toggling && setModalToggle(null)}></div>
+          <div className="relative bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
+            <h3 className="font-headline font-extrabold text-[#1b1c1c] text-lg mb-2">
+              {modalToggle.active ? '¿Desactivar usuario?' : '¿Activar usuario?'}
+            </h3>
+            <p className="text-sm text-[#424752] mb-6">
+              {modalToggle.active
+                ? <>El usuario <span className="font-bold">{modalToggle.fullName}</span> no podrá iniciar sesión.</>
+                : <>El usuario <span className="font-bold">{modalToggle.fullName}</span> podrá iniciar sesión nuevamente.</>
+              }
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalToggle(null)}
+                disabled={toggling}
+                className="flex-1 border border-[#e4e2e2] text-[#424752] font-headline font-bold py-2.5 rounded-full hover:bg-[#f5f3f3] transition-colors text-sm disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleToggleActivo}
+                disabled={toggling}
+                className={`flex-1 text-white font-headline font-bold py-2.5 rounded-full transition-colors text-sm disabled:opacity-60 ${
+                  modalToggle.active ? 'bg-[#ba1a1a] hover:bg-red-700' : 'bg-green-700 hover:bg-green-800'
+                }`}
+              >
+                {toggling ? (modalToggle.active ? 'Desactivando...' : 'Activando...') : (modalToggle.active ? 'Desactivar' : 'Activar')}
               </button>
             </div>
           </div>

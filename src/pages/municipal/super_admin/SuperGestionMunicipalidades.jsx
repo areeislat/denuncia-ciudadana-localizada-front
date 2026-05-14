@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import useAuthStore from '../../../store/authStore';
+import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 // TODO: reemplazar con llamada al backend cuando esté disponible
 const mockMunicipalidades = [
@@ -82,102 +83,7 @@ export default function SuperGestionMunicipalidades() {
 
   return (
     <div>
-      {/* SIDEBAR desktop */}
-      <aside className="hidden md:flex flex-col h-screen w-60 fixed left-0 top-0 bg-[#001A33] py-5 z-50">
-        <div className="px-5 mb-6">
-          <h1 className="text-base font-bold text-white font-headline">DESIGEO</h1>
-          <p className="text-slate-400 text-[10px] mt-0.5">Panel de Gestión</p>
-        </div>
-        <div className="px-4 mb-5">
-          <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
-            <div className="w-9 h-9 rounded-full bg-[#D7141A] flex items-center justify-center text-white text-xs font-bold shrink-0">{initials}</div>
-            <div className="min-w-0">
-              <p className="text-white text-xs font-bold truncate">{user?.fullName}</p>
-              <p className="text-slate-400 text-[10px]">Super Administrador</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-0.5 px-2 overflow-y-auto">
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">Gestión</p>
-          <Link to="/municipal/dashboard" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">dashboard</span>
-            <span className="font-headline font-medium">Dashboard</span>
-          </Link>
-          <Link to="/municipal/gestion" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">assignment</span>
-            <span className="font-headline font-medium">Gestión Reportes</span>
-          </Link>
-          <Link to="/super/usuarios" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">group</span>
-            <span className="font-headline font-medium">Usuarios</span>
-          </Link>
-          <div className="border-t border-white/5 my-2 mx-2"></div>
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">Super Admin</p>
-          <Link to="/super/municipalidades" className="sidebar-link sidebar-active rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-white">
-            <span className="material-symbols-outlined text-lg fill-icon">location_city</span>
-            <span className="font-headline font-medium">Municipalidades</span>
-          </Link>
-          <Link to="/super/auditoria" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">policy</span>
-            <span className="font-headline font-medium">Auditoría</span>
-          </Link>
-        </nav>
-        <div className="px-3 mt-auto">
-          <button onClick={handleLogout} className="text-slate-400 hover:text-white px-2 py-2 flex items-center gap-2 text-sm w-full">
-            <span className="material-symbols-outlined text-lg">logout</span>Cerrar Sesión
-          </button>
-        </div>
-      </aside>
-
-      {/* MOBILE HEADER */}
-      <header className="md:hidden bg-[#001A33] sticky top-0 z-50 shadow-lg px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setMobileMenuOpen(true)} className="text-white">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <span className="text-lg font-extrabold text-white font-headline">DESIGEO</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-white">notifications</span>
-          <div className="w-8 h-8 rounded-full bg-[#D7141A] flex items-center justify-center text-white text-xs font-bold">{initials}</div>
-        </div>
-      </header>
-
-      {/* MOBILE MENU */}
-      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
-        <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)}></div>
-        <div className="mobile-menu-panel">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-white font-headline font-bold">DESIGEO</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-white">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3 mb-4">
-            <div className="w-9 h-9 rounded-full bg-[#D7141A] flex items-center justify-center text-white text-xs font-bold">{initials}</div>
-            <div>
-              <p className="text-white text-xs font-bold">{user?.fullName}</p>
-              <p className="text-slate-400 text-[10px]">Super Administrador</p>
-            </div>
-          </div>
-          <nav className="space-y-1">
-            <Link to="/municipal/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">dashboard</span>Dashboard
-            </Link>
-            <Link to="/super/municipalidades" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-2.5 px-3 rounded-lg bg-white/10 text-sm">
-              <span className="material-symbols-outlined">location_city</span>Municipalidades
-            </Link>
-            <Link to="/super/auditoria" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">policy</span>Auditoría
-            </Link>
-            <div className="border-t border-white/10 my-3"></div>
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">logout</span>Cerrar sesión
-            </button>
-          </nav>
-        </div>
-      </div>
-
+      <MunicipalSidebar />
       {/* MAIN */}
       <main className="md:ml-60 p-4 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
