@@ -1,93 +1,74 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../../../config/api';
 import useAuthStore from '../../../store/authStore';
 
-const API_URL = 'http://localhost:8087/api/users';
+const estadoConfig = {
+  PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente', icon: 'pending' },
+  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso',   icon: 'sync' },
+  RESOLVED:    { label: 'Resuelto',   clase: 'badge-resuelto',  icon: 'check_circle' },
+  REJECTED:    { label: 'Rechazado',  clase: 'badge-rechazado', icon: 'cancel' },
+};
 
-export default function MunicipalGestionUsuarios() {
-  const { user, token, logout } = useAuthStore();
+const prioridadConfig = {
+  HIGH:   { label: 'Alta',  clase: 'bg-[#D7141A] text-white' },
+  MEDIUM: { label: 'Media', clase: 'bg-amber-100 text-amber-800' },
+  LOW:    { label: 'Baja',  clase: 'bg-green-100 text-green-800' },
+};
+
+const filtros = ['Todos', 'Pendientes', 'En Proceso', 'Resueltos', 'Rechazados'];
+const filtroToStatus = {
+  'Todos':      '',
+  'Pendientes': 'PENDING',
+  'En Proceso': 'IN_PROGRESS',
+  'Resueltos':  'RESOLVED',
+  'Rechazados': 'REJECTED',
+};
+
+const PAGE_SIZE = 20;
+
+export default function MunicipalGestionReportes() {
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [usuarios, setUsuarios] = useState([]);
+  const [reportes, setReportes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [busqueda, setBusqueda] = useState('');
   const [filtroActivo, setFiltroActivo] = useState('Todos');
-  const [modalEliminar, setModalEliminar] = useState(null);
-  const [eliminando, setEliminando] = useState(false);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
 
   const initials = user?.fullName
     ?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
-  // Cargar solo CITIZENS
   useEffect(() => {
-    const fetchUsuarios = async () => {
+    const fetchReportes = async () => {
       try {
         setCargando(true);
         setError(null);
-        const { data } = await axios.get(API_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        // Filtrar solo CITIZEN — el officer solo gestiona ciudadanos
-        const citizens = data.filter((u) => u.roleName === 'CITIZEN');
-        setUsuarios(citizens);
+        const statusParam = filtroToStatus[filtroActivo];
+        const params = new URLSearchParams({ page, size: PAGE_SIZE });
+        if (statusParam) params.append('status', statusParam);
+        const data = await apiClient.get(`/api/reports?${params}`);
+        setReportes(data.reports || []);
+        setTotal(data.total || 0);
       } catch (err) {
-        if (err.response?.status === 401) {
-          logout();
-          navigate('/login');
-        } else {
-          setError('No se pudo cargar la lista de usuarios.');
-        }
+        if (err.response?.status === 401) { logout(); navigate('/login'); }
+        else setError('No se pudieron cargar los reportes.');
       } finally {
         setCargando(false);
       }
     };
-    fetchUsuarios();
-  }, [token]);
+    fetchReportes();
+  }, [filtroActivo, page]);
 
-  const handleEliminar = async () => {
-    if (!modalEliminar) return;
-    try {
-      setEliminando(true);
-      await axios.delete(`${API_URL}/${modalEliminar.userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsuarios((prev) => prev.filter((u) => u.userId !== modalEliminar.userId));
-      setModalEliminar(null);
-    } catch (err) {
-      if (err.response?.status === 401) {
-        logout();
-        navigate('/login');
-      } else {
-        setError('No se pudo eliminar el usuario.');
-      }
-    } finally {
-      setEliminando(false);
-    }
-  };
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const usuariosFiltrados = usuarios.filter((u) => {
-    const matchBusqueda = busqueda === '' ||
-      u.fullName?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      u.email?.toLowerCase().includes(busqueda.toLowerCase());
-    const matchActivo =
-      filtroActivo === 'Todos' ||
-      (filtroActivo === 'Activos' && u.active) ||
-      (filtroActivo === 'Inactivos' && !u.active);
-    return matchBusqueda && matchActivo;
-  });
-
-  const formatFecha = (instant) => {
-    if (!instant) return '—';
-    return new Date(instant).toLocaleDateString('es-CL', {
-      day: 'numeric', month: 'short', year: 'numeric',
-    });
+  const formatFecha = (iso) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (
@@ -113,12 +94,12 @@ export default function MunicipalGestionUsuarios() {
             <span className="material-symbols-outlined text-lg">dashboard</span>
             <span className="font-headline font-medium">Dashboard</span>
           </Link>
-          <Link to="/municipal/gestion" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">assignment</span>
+          <Link to="/municipal/gestion" className="sidebar-link sidebar-active rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-white">
+            <span className="material-symbols-outlined text-lg fill-icon">assignment</span>
             <span className="font-headline font-medium">Gestión Reportes</span>
           </Link>
-          <Link to="/municipal/usuarios" className="sidebar-link sidebar-active rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-white">
-            <span className="material-symbols-outlined text-lg fill-icon">group</span>
+          <Link to="/municipal/usuarios" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
+            <span className="material-symbols-outlined text-lg">group</span>
             <span className="font-headline font-medium">Usuarios</span>
           </Link>
         </nav>
@@ -164,10 +145,10 @@ export default function MunicipalGestionUsuarios() {
             <Link to="/municipal/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
               <span className="material-symbols-outlined">dashboard</span>Dashboard
             </Link>
-            <Link to="/municipal/gestion" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
+            <Link to="/municipal/gestion" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-2.5 px-3 rounded-lg bg-white/10 text-sm">
               <span className="material-symbols-outlined">assignment</span>Gestión Reportes
             </Link>
-            <Link to="/municipal/usuarios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-2.5 px-3 rounded-lg bg-white/10 text-sm">
+            <Link to="/municipal/usuarios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
               <span className="material-symbols-outlined">group</span>Usuarios
             </Link>
             <div className="border-t border-white/10 my-3"></div>
@@ -182,47 +163,26 @@ export default function MunicipalGestionUsuarios() {
       <main className="md:ml-60 p-4 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-[#1b1c1c] font-headline mb-1">Gestión de Ciudadanos</h2>
-            <p className="text-[#424752] text-sm">Ciudadanos registrados en tu municipio.</p>
-          </div>
-          <Link
-            to="/municipal/usuarios/crear"
-            className="flex items-center gap-2 bg-[#0050A5] text-white font-headline font-bold py-2.5 px-5 rounded-full text-sm hover:bg-[#003A7A] transition-colors shadow-md self-start"
-          >
-            <span className="material-symbols-outlined text-sm">person_add</span>Nuevo Ciudadano
-          </Link>
-        </div>
-
-        {/* Búsqueda y filtro */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-[#f5f3f3] mb-6 flex flex-col md:flex-row gap-3">
-          <div className="flex-1 flex items-center gap-2 border border-[#e4e2e2] rounded-lg px-3 py-2">
-            <span className="material-symbols-outlined text-[#737783] text-sm">search</span>
-            <input
-              type="text"
-              placeholder="Buscar por nombre o email..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="flex-1 text-sm outline-none bg-transparent text-[#1b1c1c] placeholder:text-[#737783]"
-            />
-          </div>
-          <div className="flex gap-2">
-            {['Todos', 'Activos', 'Inactivos'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFiltroActivo(f)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                  filtroActivo === f
-                    ? 'bg-[#003a7a] text-white'
-                    : 'bg-[#eae8e7] text-[#424752] hover:bg-[#dbd9d9]'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+            <h2 className="text-2xl md:text-3xl font-extrabold text-[#1b1c1c] font-headline mb-1">Gestión de Reportes</h2>
+            <p className="text-[#424752] text-sm">{cargando ? '...' : `${total} reportes en total`}</p>
           </div>
         </div>
 
-        {/* Error */}
+        {/* Filtros */}
+        <div className="flex gap-2 overflow-x-auto pb-3 mb-6" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+          {filtros.map((f) => (
+            <button
+              key={f}
+              onClick={() => { setFiltroActivo(f); setPage(0); }}
+              className={`flex-shrink-0 px-5 py-2 rounded-full text-xs font-semibold transition-all ${
+                filtroActivo === f ? 'bg-[#003a7a] text-white shadow-sm' : 'bg-[#eae8e7] text-[#424752] hover:bg-[#dbd9d9]'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex items-center gap-3">
             <span className="material-symbols-outlined text-[#ba1a1a]">error</span>
@@ -230,19 +190,17 @@ export default function MunicipalGestionUsuarios() {
           </div>
         )}
 
-        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="p-4 md:p-5 border-b border-[#f5f3f3]">
             <h3 className="font-headline font-bold text-sm">
-              {cargando ? 'Cargando...' : `${usuariosFiltrados.length} ciudadano${usuariosFiltrados.length !== 1 ? 's' : ''}`}
+              {cargando ? 'Cargando...' : `${reportes.length} resultado${reportes.length !== 1 ? 's' : ''}`}
             </h3>
           </div>
 
-          {/* Loading */}
           {cargando && (
             <div className="flex items-center justify-center py-16 gap-3 text-[#424752]">
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              <span className="text-sm">Cargando usuarios...</span>
+              <span className="text-sm">Cargando reportes...</span>
             </div>
           )}
 
@@ -252,58 +210,54 @@ export default function MunicipalGestionUsuarios() {
               <table className="w-full text-sm">
                 <thead className="bg-[#f5f3f3]">
                   <tr>
-                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Nombre</th>
-                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Email</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Descripción</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Dirección</th>
                     <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Estado</th>
-                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Creado</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Prioridad</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Fecha</th>
                     <th className="px-5 py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f5f3f3]">
-                  {usuariosFiltrados.length === 0 && (
+                  {reportes.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="text-center text-[#424752] text-sm py-12">No hay ciudadanos que coincidan.</td>
+                      <td colSpan="6" className="text-center text-[#424752] text-sm py-12">No hay reportes en esta categoría.</td>
                     </tr>
                   )}
-                  {usuariosFiltrados.map((u) => (
-                    <tr key={u.userId} className="hover:bg-[#f5f3f3]/50 transition-colors">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#c5dcfd] flex items-center justify-center text-[#003a7a] text-xs font-bold shrink-0">
-                            {u.fullName?.split(' ').map((n) => n[0]).slice(0, 2).join('') || '?'}
-                          </div>
-                          <span className="font-semibold text-[#1b1c1c]">{u.fullName}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-[#424752]">{u.email}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
-                          u.active ? 'bg-green-100 text-green-700' : 'bg-[#eae8e7] text-[#737783]'
-                        }`}>
-                          {u.active ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-[#737783]">{formatFecha(u.createdAt)}</td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
+                  {reportes.map((r) => {
+                    const estado = estadoConfig[r.status] || estadoConfig['PENDING'];
+                    const prioridad = prioridadConfig[r.priority] || prioridadConfig['MEDIUM'];
+                    return (
+                      <tr key={r.reportId} className="hover:bg-[#f5f3f3]/50 transition-colors">
+                        <td className="px-5 py-3 max-w-xs">
+                          <p className="font-semibold text-[#1b1c1c] truncate">{r.description}</p>
+                          <p className="text-[10px] text-[#737783]">#{r.reportId?.slice(0, 8).toUpperCase()}</p>
+                        </td>
+                        <td className="px-5 py-3 text-xs text-[#424752] max-w-[160px] truncate">{r.address || '—'}</td>
+                        <td className="px-5 py-3">
+                          <span className={`${estado.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit`}>
+                            <span className="material-symbols-outlined text-xs fill-icon">{estado.icon}</span>
+                            {estado.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className={`${prioridad.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                            {prioridad.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-xs text-[#737783]">{formatFecha(r.createdAt)}</td>
+                        <td className="px-5 py-3">
                           <Link
-                            to={`/municipal/usuarios/${u.userId}/editar`}
-                            className="text-[#003a7a] hover:bg-[#f5f3f3] p-1.5 rounded-lg transition-colors"
-                            title="Editar"
+                            to={`/municipal/gestion/${r.reportId}`}
+                            className="text-[#003a7a] hover:bg-[#f5f3f3] p-1.5 rounded-lg transition-colors inline-flex"
+                            title="Ver detalle"
                           >
-                            <span className="material-symbols-outlined text-sm">edit</span>
+                            <span className="material-symbols-outlined text-sm">open_in_new</span>
                           </Link>
-                          <button
-                            onClick={() => setModalEliminar(u)}
-                            className="text-[#ba1a1a] hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-sm">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -312,76 +266,51 @@ export default function MunicipalGestionUsuarios() {
           {/* Mobile cards */}
           {!cargando && (
             <div className="md:hidden divide-y divide-[#f5f3f3]">
-              {usuariosFiltrados.length === 0 && (
-                <p className="text-center text-[#424752] text-sm py-12">No hay ciudadanos que coincidan.</p>
+              {reportes.length === 0 && (
+                <p className="text-center text-[#424752] text-sm py-12">No hay reportes en esta categoría.</p>
               )}
-              {usuariosFiltrados.map((u) => (
-                <div key={u.userId} className="px-4 py-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#c5dcfd] flex items-center justify-center text-[#003a7a] text-xs font-bold shrink-0">
-                        {u.fullName?.split(' ').map((n) => n[0]).slice(0, 2).join('') || '?'}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-[#1b1c1c] text-sm">{u.fullName}</p>
-                        <p className="text-[10px] text-[#737783]">{u.email}</p>
-                      </div>
+              {reportes.map((r) => {
+                const estado = estadoConfig[r.status] || estadoConfig['PENDING'];
+                const prioridad = prioridadConfig[r.priority] || prioridadConfig['MEDIUM'];
+                return (
+                  <Link key={r.reportId} to={`/municipal/gestion/${r.reportId}`} className="block px-4 py-4 hover:bg-[#f5f3f3]/50">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="font-semibold text-[#1b1c1c] text-sm line-clamp-2">{r.description}</p>
+                      <span className={`${estado.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full shrink-0`}>{estado.label}</span>
                     </div>
-                    <span className={`text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
-                      u.active ? 'bg-green-100 text-green-700' : 'bg-[#eae8e7] text-[#737783]'
-                    }`}>
-                      {u.active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Link
-                      to={`/municipal/usuarios/${u.userId}/editar`}
-                      className="flex items-center gap-1 text-[#003a7a] border border-[#003a7a] font-bold py-1.5 px-3 rounded-full text-xs hover:bg-[#f5f3f3] transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm">edit</span>Editar
-                    </Link>
-                    <button
-                      onClick={() => setModalEliminar(u)}
-                      className="flex items-center gap-1 text-[#ba1a1a] border border-[#ba1a1a] font-bold py-1.5 px-3 rounded-full text-xs hover:bg-red-50 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>Eliminar
-                    </button>
-                  </div>
-                </div>
-              ))}
+                    <p className="text-xs text-[#424752] mb-1">{r.address || 'Sin dirección'}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`${prioridad.clase} text-[9px] font-bold uppercase px-2 py-0.5 rounded-full`}>{prioridad.label}</span>
+                      <span className="text-[10px] text-[#737783]">{formatFecha(r.createdAt)}</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
-      </main>
 
-      {/* Modal confirmar eliminar */}
-      {modalEliminar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !eliminando && setModalEliminar(null)}></div>
-          <div className="relative bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
-            <h3 className="font-headline font-extrabold text-[#1b1c1c] text-lg mb-2">¿Eliminar ciudadano?</h3>
-            <p className="text-sm text-[#424752] mb-6">
-              Estás a punto de eliminar a <span className="font-bold">{modalEliminar.fullName}</span>. Esta acción no se puede deshacer.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setModalEliminar(null)}
-                disabled={eliminando}
-                className="flex-1 border border-[#e4e2e2] text-[#424752] font-headline font-bold py-2.5 rounded-full hover:bg-[#f5f3f3] transition-colors text-sm disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEliminar}
-                disabled={eliminando}
-                className="flex-1 bg-[#ba1a1a] text-white font-headline font-bold py-2.5 rounded-full hover:bg-red-700 transition-colors text-sm disabled:opacity-60"
-              >
-                {eliminando ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
+        {/* Paginación */}
+        {!cargando && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="flex items-center gap-1 text-sm font-bold text-[#003a7a] disabled:text-[#c2c6d4] disabled:cursor-not-allowed px-4 py-2 rounded-full border border-[#003a7a] disabled:border-[#c2c6d4] hover:bg-[#f5f3f3] transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">chevron_left</span> Anterior
+            </button>
+            <span className="text-sm text-[#424752]">Página {page + 1} de {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="flex items-center gap-1 text-sm font-bold text-[#003a7a] disabled:text-[#c2c6d4] disabled:cursor-not-allowed px-4 py-2 rounded-full border border-[#003a7a] disabled:border-[#c2c6d4] hover:bg-[#f5f3f3] transition-colors"
+            >
+              Siguiente <span className="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }

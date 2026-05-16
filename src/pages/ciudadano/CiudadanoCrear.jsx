@@ -1,9 +1,40 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import apiClient from '../../config/api';
 import MapComponent from '../../components/MapComponent';
 
 export default function CiudadanoCrear() {
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [form, setForm] = useState({ description: '', address: '' });
+  const [coords, setCoords] = useState({ lat: -33.4569, lng: -70.6483 });
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setEnviando(true);
+    try {
+      await apiClient.post('/api/reports', {
+        description: form.description,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        address: form.address,
+      });
+      navigate('/ciudadano/reportes');
+    } catch (err) {
+      const msg = err.response?.data?.description?.[0] || err.response?.data?.message || 'Error al enviar el reporte.';
+      setError(msg);
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   return (
     <div>
@@ -80,60 +111,53 @@ export default function CiudadanoCrear() {
         </div>
 
         {/* Two-column layout on desktop */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
           {/* Left: Form */}
           <div className="space-y-5">
             <div>
-              <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Categoría</label>
-              <select className="w-full bg-[#e4e2e2] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#003a7a]">
-                <option>Bache / Pavimento</option>
-                <option>Luminaria Dañada</option>
-                <option>Basura Ilegal</option>
-                <option>Microbasural</option>
-                <option>Infraestructura Vial</option>
-                <option>Otro</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Título del Reporte</label>
-              <input
-                className="w-full bg-[#e4e2e2] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#003a7a] text-sm"
-                placeholder="Ej: Bache de gran tamaño en cruce peatonal"
-              />
-            </div>
-            <div>
               <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Descripción del Problema</label>
               <textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                required
+                minLength={10}
+                maxLength={1000}
                 className="w-full bg-[#e4e2e2] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#003a7a] text-sm"
-                rows="4"
+                rows="5"
                 placeholder="Describe el problema con al menos 10 caracteres..."
-              ></textarea>
+              />
               <p className="text-[10px] text-[#737783] mt-1">Mínimo 10 caracteres, máximo 1000.</p>
             </div>
             <div>
-              <div className="flex justify-between mb-2">
-                <span className="font-headline text-sm font-bold">Fotos de Evidencia</span>
-                <span className="text-xs text-[#424752]">0 / 5 fotos</span>
-              </div>
-              <div className="grid grid-cols-5 gap-3">
-                <button
-                  type="button"
-                  className="aspect-square rounded-xl bg-[#e4e2e2] flex flex-col items-center justify-center border-2 border-dashed border-[#c2c6d4] text-[#737783] hover:bg-[#dbd9d9] transition-colors"
-                >
-                  <span className="material-symbols-outlined">add_a_photo</span>
-                  <span className="text-[8px] font-bold mt-1">Agregar</span>
-                </button>
-              </div>
-              <p className="text-[10px] text-[#737783] mt-1">JPG, PNG o HEIC. Máximo 5 MB cada una.</p>
+              <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Dirección (opcional)</label>
+              <input
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                className="w-full bg-[#e4e2e2] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#003a7a] text-sm"
+                placeholder="Ej: Av. Principal 123, Santiago"
+              />
             </div>
 
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-4 py-3">
+                {error}
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
-              <Link
-                to="/ciudadano/reportes"
-                className="flex-1 bg-[#0050A5] text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2"
+              <button
+                type="submit"
+                disabled={enviando}
+                className="flex-1 bg-[#0050A5] text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                Enviar Reporte <span className="material-symbols-outlined text-sm">send</span>
-              </Link>
+                {enviando ? (
+                  <><span className="material-symbols-outlined text-sm animate-spin">progress_activity</span> Enviando...</>
+                ) : (
+                  <>Enviar Reporte <span className="material-symbols-outlined text-sm">send</span></>
+                )}
+              </button>
               <Link
                 to="/ciudadano"
                 className="px-6 text-[#424752] font-headline font-bold py-4 rounded-xl hover:bg-[#f5f3f3] transition-colors flex items-center justify-center"
@@ -161,7 +185,7 @@ export default function CiudadanoCrear() {
               Puedes crear reportes en cualquier comuna. La ubicación del problema se registra automáticamente.
             </p>
           </div>
-        </div>
+        </form>
       </main>
     </div>
   );

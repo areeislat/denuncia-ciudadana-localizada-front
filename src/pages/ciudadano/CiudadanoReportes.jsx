@@ -1,50 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import apiClient from '../../config/api';
 import useAuthStore from '../../store/authStore';
-
-// TODO: reemplazar con llamada al Report Service cuando esté disponible
-const mockReportes = [
-  {
-    id: '1',
-    titulo: 'Bache de gran tamaño en cruce peatonal',
-    direccion: 'Av. Irarrázaval 3421, Ñuñoa',
-    estado: 'PENDING',
-    fecha: 'Hace 2 horas',
-    apoyos: 12,
-    fotos: 2,
-  },
-  {
-    id: '2',
-    titulo: 'Microbasural - Av. Providencia',
-    direccion: 'Av. Providencia 1240',
-    estado: 'IN_PROGRESS',
-    fecha: 'Ayer, 14:30',
-    mensaje: 'Cuadrilla municipal asignada. Resolución estimada: 24h.',
-  },
-  {
-    id: '3',
-    titulo: 'Luminaria dañada - Calle Los Leones',
-    direccion: 'Calle Los Leones 450, Providencia',
-    estado: 'RESOLVED',
-    fecha: '3 Oct 2024',
-    apoyos: 5,
-  },
-  {
-    id: '4',
-    titulo: 'Vehículo mal estacionado',
-    direccion: 'Pje. Las Orquideas 45',
-    estado: 'REJECTED',
-    fecha: '28 Sep 2024',
-    motivo: 'Fuera de jurisdicción municipal.',
-  },
-  {
-    id: '5',
-    titulo: 'Señalética de Pare dañada',
-    direccion: 'Esquina Eliodoro Yáñez',
-    estado: 'RESOLVED',
-    fecha: '20 Sep 2024',
-  },
-];
 
 const estadoConfig = {
   PENDING:     { label: 'Pendiente', clase: 'badge-pendiente', icon: 'pending',       filtro: 'Pendientes' },
@@ -58,6 +15,9 @@ const filtros = ['Todos', 'Pendientes', 'En Proceso', 'Resueltos', 'Rechazados']
 export default function CiudadanoReportes() {
   const [filtroActivo, setFiltroActivo] = useState('Todos');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [reportes, setReportes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -69,13 +29,34 @@ export default function CiudadanoReportes() {
     navigate('/login');
   };
 
+  useEffect(() => {
+    const fetchReportes = async () => {
+      try {
+        setCargando(true);
+        setError(null);
+        const data = await apiClient.get(`/api/reports/user/${user.userId}`);
+        setReportes(data.reports || []);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          logout();
+          navigate('/login');
+        } else {
+          setError('No se pudieron cargar tus reportes.');
+        }
+      } finally {
+        setCargando(false);
+      }
+    };
+    if (user?.userId) fetchReportes();
+  }, [user?.userId]);
+
   const conteo = (f) => f === 'Todos'
-    ? mockReportes.length
-    : mockReportes.filter((r) => estadoConfig[r.estado].filtro === f).length;
+    ? reportes.length
+    : reportes.filter((r) => estadoConfig[r.status]?.filtro === f).length;
 
   const reportesFiltrados = filtroActivo === 'Todos'
-    ? mockReportes
-    : mockReportes.filter((r) => estadoConfig[r.estado].filtro === filtroActivo);
+    ? reportes
+    : reportes.filter((r) => estadoConfig[r.status]?.filtro === filtroActivo);
 
   return (
     <div>
@@ -175,17 +156,32 @@ export default function CiudadanoReportes() {
 
         {/* Grid de reportes */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reportesFiltrados.length === 0 && (
+          {cargando && (
+            <div className="col-span-3 flex items-center justify-center py-16 gap-3 text-[#424752]">
+              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span className="text-sm">Cargando reportes...</span>
+            </div>
+          )}
+          {error && (
+            <div className="col-span-3 bg-red-50 border border-red-100 rounded-xl p-4 flex items-center gap-3">
+              <span className="material-symbols-outlined text-[#ba1a1a]">error</span>
+              <p className="text-sm text-[#ba1a1a] font-medium">{error}</p>
+            </div>
+          )}
+          {!cargando && !error && reportesFiltrados.length === 0 && (
             <p className="col-span-3 text-center text-[#424752] text-sm py-12">
               No hay reportes en esta categoría.
             </p>
           )}
-          {reportesFiltrados.map((reporte) => {
-            const config = estadoConfig[reporte.estado];
+          {!cargando && !error && reportesFiltrados.map((reporte) => {
+            const config = estadoConfig[reporte.status] || estadoConfig['PENDING'];
+            const fecha = reporte.createdAt
+              ? new Date(reporte.createdAt).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '—';
             return (
               <Link
-                key={reporte.id}
-                to={`/ciudadano/reportes/${reporte.id}`}
+                key={reporte.reportId}
+                to={`/ciudadano/reportes/${reporte.reportId}`}
                 className="block bg-white rounded-xl p-5 shadow-sm border border-[#f5f3f3] card-hover"
               >
                 <div className="flex justify-between items-start mb-2">
@@ -193,36 +189,13 @@ export default function CiudadanoReportes() {
                     <span className="material-symbols-outlined text-xs fill-icon">{config.icon}</span>
                     {config.label}
                   </span>
-                  <span className="text-[10px] text-[#737783]">{reporte.fecha}</span>
+                  <span className="text-[10px] text-[#737783]">{fecha}</span>
                 </div>
-                <h3 className="font-headline font-bold text-[#1b1c1c] text-base mb-1">{reporte.titulo}</h3>
+                <h3 className="font-headline font-bold text-[#1b1c1c] text-base mb-1 line-clamp-2">{reporte.description}</h3>
                 <div className="flex items-center gap-1 text-[#424752] mb-2">
                   <span className="material-symbols-outlined text-xs">location_on</span>
-                  <span className="text-xs">{reporte.direccion}</span>
+                  <span className="text-xs">{reporte.address || 'Sin dirección'}</span>
                 </div>
-                {reporte.mensaje && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-start gap-2">
-                    <span className="material-symbols-outlined text-[#003a7a] text-sm">info</span>
-                    <p className="text-[10px] text-[#003a7a] font-medium">{reporte.mensaje}</p>
-                  </div>
-                )}
-                {reporte.motivo && (
-                  <p className="text-[10px] text-[#ba1a1a] font-medium italic">Motivo: {reporte.motivo}</p>
-                )}
-                {(reporte.apoyos || reporte.fotos) && (
-                  <div className="flex items-center gap-3 text-xs text-[#424752] mt-2">
-                    {reporte.apoyos && (
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">thumb_up</span>{reporte.apoyos} apoyos
-                      </span>
-                    )}
-                    {reporte.fotos && (
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">photo_camera</span>{reporte.fotos} fotos
-                      </span>
-                    )}
-                  </div>
-                )}
               </Link>
             );
           })}
