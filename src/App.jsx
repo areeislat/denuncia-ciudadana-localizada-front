@@ -3,6 +3,9 @@ import Home from './pages/public/Home';
 import Login from './pages/public/Login';
 import Registro from './pages/public/Registro';
 import Recuperar from './pages/public/Recuperar';
+import Ayuda from './pages/Ayuda';
+import TerminosYPrivacidad from './pages/TerminosYPrivacidad';
+import Transparencia from './pages/Transparencia';
 
 // Ciudadano
 import CiudadanoHome from './pages/ciudadano/CiudadanoHome';
@@ -59,6 +62,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar" element={<Recuperar />} />
+        <Route path="/terminos" element={<TerminosYPrivacidad />} />
+        <Route path="/transparencia" element={<Transparencia />} />
+        <Route path="/ayuda" element={<Ayuda />} />
 
         {/* ── CIUDADANO ── */}
         <Route path="/ciudadano" element={

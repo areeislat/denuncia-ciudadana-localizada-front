@@ -15,9 +15,9 @@ export default function Header() {
             <Link to="/" className="text-white font-headline font-bold text-sm border-b-2 border-[#D7141A] pb-1">
               Inicio
             </Link>
-            <a href="#" className="text-slate-300 hover:text-white font-headline font-bold text-sm">
+            <Link to="/ayuda" className="text-slate-300 hover:text-white font-headline font-bold text-sm">
               Ayuda
-            </a>
+            </Link>
           </nav>
           <div className="flex items-center gap-3">
             <Link
@@ -51,9 +51,9 @@ export default function Header() {
             >
               Inicio
             </Link>
-            <a href="#" className="block text-slate-300 font-headline font-bold py-3 px-4 rounded-lg hover:bg-white/5">
+            <Link to="/ayuda" onClick={() => setMobileMenuOpen(false)} className="block text-slate-300 font-headline font-bold py-3 px-4 rounded-lg hover:bg-white/5">
               Ayuda
-            </a>
+            </Link>
             <div className="border-t border-white/10 my-4"></div>
             <Link
               to="/login"
