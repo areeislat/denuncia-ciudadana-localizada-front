@@ -2,14 +2,27 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import apiClient from '../../config/api';
 import MapComponent from '../../components/MapComponent';
+import useAuthStore from '../../store/authStore';
+import CiudadanoFooter from '../../components/CiudadanoFooter';
 
 export default function CiudadanoCrear() {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [form, setForm] = useState({ description: '', address: '' });
   const [coords, setCoords] = useState({ lat: -33.4569, lng: -70.6483 });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,9 +61,41 @@ export default function CiudadanoCrear() {
             <Link to="/ciudadano" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Inicio</Link>
             <Link to="/ciudadano/crear" className="text-white font-headline font-bold text-sm border-b-2 border-[#D7141A] pb-1">Reportar</Link>
             <Link to="/ciudadano/reportes" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Mis Reportes</Link>
+            <Link to="/ayuda" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Ayuda</Link>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold">MG</div>
+            <button className="text-white hover:bg-white/10 rounded-md p-2">
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold hover:ring-2 hover:ring-white/30 transition-all"
+              >
+                {initials}
+              </button>
+              {profileMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-[#e4e2e2] w-48 overflow-hidden z-50">
+                  <div className="px-4 py-3 border-b border-[#f5f3f3]">
+                    <p className="text-sm font-bold font-headline text-[#1b1c1c]">{user?.fullName}</p>
+                    <p className="text-[10px] text-[#424752] capitalize">{user?.roleName?.toLowerCase().replace('_', ' ')}</p>
+                  </div>
+                  <Link
+                    to="/ciudadano/perfil"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-[#1b1c1c] hover:bg-[#f5f3f3] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">person</span>Mi Perfil
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#ba1a1a] hover:bg-[#f5f3f3] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">logout</span>Cerrar sesión
+                  </button>
+                </div>
+              )}
+            </div>
             <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-white">
               <span className="material-symbols-outlined">menu</span>
             </button>
@@ -64,8 +109,8 @@ export default function CiudadanoCrear() {
         <div className="mobile-menu-panel">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <p className="text-white font-headline font-bold">María González</p>
-              <p className="text-slate-400 text-xs">Ciudadano</p>
+              <p className="text-white font-headline font-bold">{user?.fullName}</p>
+              <p className="text-slate-400 text-xs capitalize">{user?.roleName?.toLowerCase().replace('_', ' ')}</p>
             </div>
             <button onClick={() => setMobileMenuOpen(false)} className="text-white">
               <span className="material-symbols-outlined">close</span>
@@ -75,9 +120,10 @@ export default function CiudadanoCrear() {
             <Link to="/ciudadano" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">home</span>Inicio</Link>
             <Link to="/ciudadano/crear" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-3 px-4 rounded-lg bg-white/10"><span className="material-symbols-outlined">add_circle</span>Reportar</Link>
             <Link to="/ciudadano/reportes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">history</span>Mis Reportes</Link>
-            <a href="#" className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">help</span>Ayuda</a>
+            <Link to="/ciudadano/perfil" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">person</span>Mi Perfil</Link>
+            <Link to="/ayuda" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">help</span>Ayuda</Link>
             <div className="border-t border-white/10 my-4"></div>
-            <Link to="/login" className="flex items-center gap-3 text-red-400 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">logout</span>Cerrar sesión</Link>
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">logout</span>Cerrar sesión</button>
           </nav>
         </div>
       </div>
@@ -187,6 +233,9 @@ export default function CiudadanoCrear() {
           </div>
         </form>
       </main>
+
+      {/* FOOTER */}
+      <CiudadanoFooter />
     </div>
   );
 }

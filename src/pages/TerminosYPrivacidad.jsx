@@ -2,13 +2,19 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import CiudadanoHeader from '../components/CiudadanoHeader';
+import CiudadanoFooter from '../components/CiudadanoFooter';
+import useAuthStore from '../store/authStore';
 
 export default function TerminosYPrivacidad() {
   const navigate = useNavigate();
+  const { token, user } = useAuthStore();
+  const isAuthenticated = !!token;
+  const isCitizen = user?.roleName === 'CITIZEN';
 
   return (
     <div className="min-h-screen bg-[#fbf9f8] flex flex-col">
-      <Header />
+      {isAuthenticated && isCitizen ? <CiudadanoHeader /> : <Header />}
       <main className="flex-1 px-4 md:px-6 py-10">
         <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-[#e4e2e2]">
           <button 
@@ -62,7 +68,7 @@ export default function TerminosYPrivacidad() {
           </section>
         </div>
       </main>
-      <Footer />
+      {isAuthenticated && isCitizen ? <CiudadanoFooter /> : <Footer />}
     </div>
   );
 }

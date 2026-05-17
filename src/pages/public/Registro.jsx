@@ -32,10 +32,37 @@ export default function Registro() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    if (name === 'rut') {
+      // Auto-formatear RUT: máximo 9 caracteres (8 dígitos + 1 dígito verificador K o número)
+      const clean = value.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
+      let formatted = clean;
+      if (clean.length > 1) {
+        const body = clean.slice(0, -1);
+        const dv = clean.slice(-1);
+        formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + dv;
+      }
+      setForm((prev) => ({ ...prev, rut: formatted }));
+    } else if (name === 'phone') {
+      // Auto-formatear teléfono chileno: +56 9 XXXX XXXX
+      const clean = value.replace(/[^0-9+]/g, '');
+      // Si empieza con +, mantener el +
+      let digits = clean.replace(/\+/g, '');
+      // Limitar a 11 dígitos (56 + 9 dígitos)
+      digits = digits.slice(0, 11);
+      let formatted = '';
+      if (digits.length > 0) {
+        formatted = '+' + digits.slice(0, 2);
+        if (digits.length > 2) formatted += ' ' + digits.slice(2, 3);
+        if (digits.length > 3) formatted += ' ' + digits.slice(3, 7);
+        if (digits.length > 7) formatted += ' ' + digits.slice(7, 11);
+      }
+      setForm((prev) => ({ ...prev, phone: formatted }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -59,17 +86,18 @@ export default function Registro() {
     setLoading(true);
     try {
       const rutLimpio = form.rut.replace(/\./g, '').replace(/-/g, '').toUpperCase();
+      const phoneLimpio = form.phone ? form.phone.replace(/\s/g, '') : undefined;
       await apiClient.post('/api/users', {
         fullName: form.fullName,
         rut: rutLimpio,
         email: form.email,
-        phone: form.phone || undefined,
+        phone: phoneLimpio,
         password: form.password,
         roleName: 'CITIZEN',
       });
 
       setForm(FORM_INICIAL);
-      setShowModal(true);
+      navigate('/login');
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al crear la cuenta. Intenta nuevamente.';
       setError(msg);
