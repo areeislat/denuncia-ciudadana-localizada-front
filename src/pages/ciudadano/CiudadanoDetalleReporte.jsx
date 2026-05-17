@@ -1,47 +1,7 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import apiClient from '../../config/api';
 import useAuthStore from '../../store/authStore';
-
-// TODO: reemplazar con llamada al Report Service cuando esté disponible
-const mockReportes = {
-  '1': {
-    id: '1',
-    folio: '#DEN-2026-0001',
-    titulo: 'Bache de gran tamaño en cruce peatonal',
-    direccion: 'Av. Irarrázaval 3421, Ñuñoa',
-    categoria: 'Vialidad',
-    prioridad: 'HIGH',
-    estado: 'PENDING',
-    fecha: '14 Oct, 09:20',
-    apoyos: 12,
-    descripcion: 'Bache de aproximadamente 50cm de diámetro en la calzada, representa peligro para vehículos y ciclistas.',
-    historial: [
-      { estado: 'Reporte Recibido', fecha: '14 Oct, 09:20', actor: 'Sistema central', completo: true },
-      { estado: 'En Inspección', fecha: '15 Oct, 14:45', actor: 'Equipo de Terreno', completo: true },
-      { estado: 'Programado para Reparación', fecha: 'Pendiente', actor: 'Pendiente de materiales', completo: false },
-    ],
-    comentarios: [],
-  },
-  '2': {
-    id: '2',
-    folio: '#DEN-2026-0002',
-    titulo: 'Microbasural - Av. Providencia',
-    direccion: 'Av. Providencia 1240',
-    categoria: 'Medio Ambiente',
-    prioridad: 'MEDIUM',
-    estado: 'IN_PROGRESS',
-    fecha: 'Ayer, 14:30',
-    apoyos: 5,
-    descripcion: 'Acumulación de basura en la vereda, lleva varios días sin ser retirada.',
-    historial: [
-      { estado: 'Reporte Recibido', fecha: 'Ayer, 10:00', actor: 'Sistema central', completo: true },
-      { estado: 'Asignado a Cuadrilla', fecha: 'Ayer, 14:30', actor: 'Agente Municipal', completo: true },
-    ],
-    comentarios: [
-      { autor: 'Agente Municipal - Operaciones', iniciales: 'AM', fecha: 'Hace 2 horas', texto: 'Cuadrilla municipal asignada. Tiempo estimado de resolución: 24 horas.' },
-    ],
-  },
-};
 
 const prioridadConfig = {
   HIGH:   { label: 'Alta',  clase: 'bg-[#D7141A] text-white' },
@@ -61,6 +21,10 @@ export default function CiudadanoDetalleReporte() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [reporte, setReporte] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [reabriendo, setReabriendo] = useState(false);
 
   const initials = user?.fullName
     ?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
@@ -70,13 +34,54 @@ export default function CiudadanoDetalleReporte() {
     navigate('/login');
   };
 
-  // TODO: reemplazar con fetch real por id
-  const reporte = mockReportes[id];
+  useEffect(() => {
+    const fetchReporte = async () => {
+      try {
+        setCargando(true);
+        setError(null);
+        const data = await apiClient.get(`/api/reports/${id}`);
+        setReporte(data);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          logout();
+          navigate('/login');
+        } else {
+          setError('No se pudo cargar el reporte.');
+        }
+      } finally {
+        setCargando(false);
+      }
+    };
+    fetchReporte();
+  }, [id]);
 
-  if (!reporte) {
+  const handleReabrir = async () => {
+    const razon = window.prompt('¿Cuál es la razón para reabrir este reporte?');
+    if (!razon?.trim()) return;
+    try {
+      setReabriendo(true);
+      const data = await apiClient.post(`/api/reports/${id}/reopen`, { reason: razon });
+      setReporte(data);
+    } catch {
+      alert('No se pudo reabrir el reporte. Intenta nuevamente.');
+    } finally {
+      setReabriendo(false);
+    }
+  };
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gap-3 text-[#424752]">
+        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+        <span className="text-sm">Cargando reporte...</span>
+      </div>
+    );
+  }
+
+  if (error || !reporte) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-[#424752] font-headline font-bold text-lg">Reporte no encontrado.</p>
+        <p className="text-[#424752] font-headline font-bold text-lg">{error || 'Reporte no encontrado.'}</p>
         <Link to="/ciudadano/reportes" className="text-[#003a7a] font-bold text-sm flex items-center gap-1">
           <span className="material-symbols-outlined text-sm">arrow_back</span> Volver a mis reportes
         </Link>
@@ -84,8 +89,8 @@ export default function CiudadanoDetalleReporte() {
     );
   }
 
-  const prioridad = prioridadConfig[reporte.prioridad];
-  const estado = estadoConfig[reporte.estado];
+  const prioridad = prioridadConfig[reporte.priority] || prioridadConfig['MEDIUM'];
+  const estado = estadoConfig[reporte.status] || estadoConfig['PENDING'];
 
   return (
     <div>
@@ -161,23 +166,20 @@ export default function CiudadanoDetalleReporte() {
                 Prioridad {prioridad.label}
               </span>
             </div>
-            <span className="text-xs font-bold text-[#003a7a] font-headline">{reporte.folio}</span>
+            <span className="text-xs font-bold text-[#003a7a] font-headline">#{reporte.reportId?.slice(0, 8).toUpperCase()}</span>
           </div>
-          <h1 className="text-2xl font-headline font-extrabold text-[#003a7a] mb-2">{reporte.titulo}</h1>
+          <h1 className="text-2xl font-headline font-extrabold text-[#003a7a] mb-2">{reporte.description}</h1>
           <div className="flex items-center gap-2 text-[#424752] mb-3">
             <span className="material-symbols-outlined text-sm">location_on</span>
-            <span className="text-sm">{reporte.direccion}</span>
+            <span className="text-sm">{reporte.address || 'Sin dirección'}</span>
           </div>
-          <p className="text-sm text-[#424752] leading-relaxed mb-4">{reporte.descripcion}</p>
           <div className="flex flex-wrap gap-4 text-xs text-[#424752]">
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">category</span>{reporte.categoria}
+              <span className="material-symbols-outlined text-sm">category</span>{reporte.category}
             </span>
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">calendar_today</span>{reporte.fecha}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">thumb_up</span>{reporte.apoyos} apoyos
+              <span className="material-symbols-outlined text-sm">calendar_today</span>
+              {reporte.createdAt ? new Date(reporte.createdAt).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
             </span>
           </div>
         </div>
@@ -188,21 +190,23 @@ export default function CiudadanoDetalleReporte() {
             <h2 className="font-headline font-extrabold text-lg text-[#003a7a] mb-6">Estado del Trámite</h2>
             <div className="relative space-y-0">
               <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-[#e4e2e2]"></div>
-              {reporte.historial.map((paso, i) => (
+              {(reporte.history || []).map((paso, i) => (
                 <div key={i} className="relative flex gap-4 pb-7">
-                  <div className={`z-10 w-8 h-8 rounded-full flex items-center justify-center ring-4 ring-white shrink-0 ${
-                    paso.completo ? 'bg-[#003a7a] text-white' : 'bg-[#e4e2e2] text-[#737783]'
-                  }`}>
-                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {paso.completo ? 'check' : 'schedule'}
-                    </span>
+                  <div className="z-10 w-8 h-8 rounded-full flex items-center justify-center ring-4 ring-white shrink-0 bg-[#003a7a] text-white">
+                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
                   </div>
                   <div>
-                    <p className={`font-bold text-sm ${paso.completo ? 'text-[#1b1c1c]' : 'text-[#737783]'}`}>{paso.estado}</p>
-                    <p className="text-xs text-[#424752]">{paso.fecha} · {paso.actor}</p>
+                    <p className="font-bold text-sm text-[#1b1c1c]">{paso.newStatus}</p>
+                    <p className="text-xs text-[#424752]">
+                      {paso.timestamp ? new Date(paso.timestamp).toLocaleString('es-CL') : '—'} · {paso.changedBy}
+                    </p>
+                    {paso.comment && <p className="text-xs text-[#424752] italic mt-0.5">"{paso.comment}"</p>}
                   </div>
                 </div>
               ))}
+              {(!reporte.history || reporte.history.length === 0) && (
+                <p className="text-sm text-[#424752] py-4">Sin historial.</p>
+              )}
             </div>
           </div>
 
@@ -211,14 +215,14 @@ export default function CiudadanoDetalleReporte() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-headline font-extrabold text-lg text-[#003a7a]">Comentarios</h2>
               <span className="bg-[#c5dcfd] text-[#003a7a] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {reporte.comentarios.length} {reporte.comentarios.length === 1 ? 'respuesta' : 'respuestas'}
+                {(reporte.comentarios || []).length} {(reporte.comentarios || []).length === 1 ? 'respuesta' : 'respuestas'}
               </span>
             </div>
-            {reporte.comentarios.length === 0 ? (
+            {(reporte.comentarios || []).length === 0 ? (
               <p className="text-sm text-[#424752] text-center py-8">Sin comentarios aún.</p>
             ) : (
               <div className="space-y-4">
-                {reporte.comentarios.map((c, i) => (
+                {(reporte.comentarios || []).map((c, i) => (
                   <div key={i} className="bg-[#f5f3f3] rounded-xl p-4 border-l-4 border-[#003a7a]">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-9 h-9 rounded-full bg-[#0050A5] flex items-center justify-center text-white font-bold text-xs shrink-0">
@@ -245,9 +249,14 @@ export default function CiudadanoDetalleReporte() {
           >
             <span className="material-symbols-outlined">arrow_back</span> Volver
           </Link>
-          {reporte.estado === 'RESOLVED' && (
-            <button className="flex-1 bg-[#0050A5] text-white font-headline font-bold py-3 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-[#003A7A] transition-colors shadow-lg">
-              <span className="material-symbols-outlined">refresh</span> Reabrir Reporte
+          {reporte.status === 'RESOLVED' && (
+            <button
+              onClick={handleReabrir}
+              disabled={reabriendo}
+              className="flex-1 bg-[#0050A5] text-white font-headline font-bold py-3 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-[#003A7A] transition-colors shadow-lg disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined">refresh</span>
+              {reabriendo ? 'Reabriendo...' : 'Reabrir Reporte'}
             </button>
           )}
         </div>
