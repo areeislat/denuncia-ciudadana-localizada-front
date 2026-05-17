@@ -5,7 +5,7 @@
 
 // API Configuration
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL || 'https://api-gateway-production-8619.up.railway.app',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   apiKey: import.meta.env.VITE_API_KEY || '',
   authToken: import.meta.env.VITE_AUTH_TOKEN || '',
 };
@@ -104,3 +104,6 @@ export default {
   getApiUrl,
   getDefaultHeaders,
 };
+
+
+

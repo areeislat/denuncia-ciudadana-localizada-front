@@ -1,134 +1,33 @@
-/**
- * Cliente HTTP para comunicación con el backend
- * Centraliza todas las requests y maneja errores
- */
+import axios from 'axios';
+import { API_CONFIG } from './env';
 
-import { getApiUrl, getDefaultHeaders } from './env';
+const apiClient = axios.create({
+  baseURL: API_CONFIG.baseURL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-class ApiClient {
-  constructor() {
-    this.baseURL = getApiUrl('');
-    this.defaultHeaders = getDefaultHeaders();
+// Interceptor de request — agrega el token automáticamente
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  /**
-   * Realiza un request GET
-   */
-  async get(endpoint, options = {}) {
-    return this.request(endpoint, {
-      method: 'GET',
-      ...options,
-    });
-  }
-
-  /**
-   * Realiza un request POST
-   */
-  async post(endpoint, data, options = {}) {
-    return this.request(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(data),
-      ...options,
-    });
-  }
-
-  /**
-   * Realiza un request PUT
-   */
-  async put(endpoint, data, options = {}) {
-    return this.request(endpoint, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-      ...options,
-    });
-  }
-
-  /**
-   * Realiza un request PATCH
-   */
-  async patch(endpoint, data, options = {}) {
-    return this.request(endpoint, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-      ...options,
-    });
-  }
-
-  /**
-   * Realiza un request DELETE
-   */
-  async delete(endpoint, options = {}) {
-    return this.request(endpoint, {
-      method: 'DELETE',
-      ...options,
-    });
-  }
-
-  /**
-   * Request genérico con manejo de errores
-   */
-  async request(endpoint, options = {}) {
-    const url = getApiUrl(endpoint);
-    
-    const config = {
-      headers: {
-        ...this.defaultHeaders,
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    try {
-      const response = await fetch(url, config);
-
-      // Manejo de errores HTTP
-      if (!response.ok) {
-        const error = new Error(`HTTP ${response.status}`);
-        error.status = response.status;
-        error.response = response;
-        
-        try {
-          error.data = await response.json();
-        } catch {
-          error.data = null;
-        }
-
-        throw error;
-      }
-
-      // Parsear respuesta
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        return await response.json();
-      }
-
-      return response;
-    } catch (error) {
-      // Log de error en desarrollo
-      if (import.meta.env.DEV) {
-        console.error(`❌ API Error [${options.method || 'GET'} ${endpoint}]:`, error);
-      }
-
-      throw error;
+// Interceptor de response — maneja errores globalmente
+apiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     }
+    return Promise.reject(error);
   }
-
-  /**
-   * Actualizar token de autenticación
-   */
-  setAuthToken(token) {
-    this.defaultHeaders['Authorization'] = `Bearer ${token}`;
-  }
-
-  /**
-   * Remover token de autenticación
-   */
-  clearAuthToken() {
-    delete this.defaultHeaders['Authorization'];
-  }
-}
-
-// Instancia única del cliente
-export const apiClient = new ApiClient();
+);
 
 export default apiClient;

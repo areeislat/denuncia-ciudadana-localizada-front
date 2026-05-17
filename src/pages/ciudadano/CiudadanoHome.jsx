@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import MapComponent from '../components/MapComponent';
+import MapComponent from '../../components/MapComponent';
+import useAuthStore from '../../store/authStore';
 
 const mockMarkers = [
   { lat: -33.423, lng: -70.615, title: 'Bache en cruce peatonal', status: 'Pendiente', color: '#dc2626', n: 12 },
@@ -11,9 +12,32 @@ const mockMarkers = [
   { lat: -33.434, lng: -70.612, title: 'Basura ilegal', status: 'En Proceso', color: '#2563eb', n: 7 },
 ];
 
+// TODO: reemplazar con llamada real al Report Service cuando esté disponible
+const mockStats = {
+  total: 5,
+  pendientes: 2,
+  resueltos: 3,
+};
+
 export default function CiudadanoHome() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  // Extraer primer nombre desde fullName (ej: "María González" → "María")
+  const firstName = user?.fullName?.split(' ')[0] || 'Ciudadano';
+
+  // Iniciales para el avatar (ej: "María González" → "MG")
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div>
@@ -35,17 +59,27 @@ export default function CiudadanoHome() {
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                 className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold hover:ring-2 hover:ring-white/30 transition-all"
               >
-                MG
+                {initials}
               </button>
               {profileMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-[#e4e2e2] w-48 overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-[#f5f3f3]">
-                    <p className="text-sm font-bold font-headline text-[#1b1c1c]">María González</p>
-                    <p className="text-[10px] text-[#424752]">Ciudadano</p>
+                    <p className="text-sm font-bold font-headline text-[#1b1c1c]">{user?.fullName}</p>
+                    <p className="text-[10px] text-[#424752] capitalize">{user?.roleName?.toLowerCase().replace('_', ' ')}</p>
                   </div>
-                  <Link to="/login" className="flex items-center gap-2 px-4 py-3 text-sm text-[#ba1a1a] hover:bg-[#f5f3f3] transition-colors">
-                    <span className="material-symbols-outlined text-lg">logout</span>Cerrar sesión
+                  <Link
+                    to="/ciudadano/perfil"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-[#1b1c1c] hover:bg-[#f5f3f3] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">person</span>Mi Perfil
                   </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#ba1a1a] hover:bg-[#f5f3f3] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">logout</span>Cerrar sesión
+                  </button>
                 </div>
               )}
             </div>
@@ -62,20 +96,36 @@ export default function CiudadanoHome() {
         <div className="mobile-menu-panel">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <p className="text-white font-headline font-bold">María González</p>
-              <p className="text-slate-400 text-xs">Ciudadano</p>
+              <p className="text-white font-headline font-bold">{user?.fullName}</p>
+              <p className="text-slate-400 text-xs capitalize">{user?.roleName?.toLowerCase().replace('_', ' ')}</p>
             </div>
             <button onClick={() => setMobileMenuOpen(false)} className="text-white">
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
           <nav className="space-y-1">
-            <Link to="/ciudadano" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-3 px-4 rounded-lg bg-white/10"><span className="material-symbols-outlined">home</span>Inicio</Link>
-            <Link to="/ciudadano/crear" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">add_circle</span>Reportar</Link>
-            <Link to="/ciudadano/reportes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">history</span>Mis Reportes</Link>
-            <a href="#" className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">help</span>Ayuda</a>
+            <Link to="/ciudadano" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-3 px-4 rounded-lg bg-white/10">
+              <span className="material-symbols-outlined">home</span>Inicio
+            </Link>
+            <Link to="/ciudadano/crear" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
+              <span className="material-symbols-outlined">add_circle</span>Reportar
+            </Link>
+            <Link to="/ciudadano/reportes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
+              <span className="material-symbols-outlined">history</span>Mis Reportes
+            </Link>
+            <Link to="/ciudadano/perfil" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
+              <span className="material-symbols-outlined">person</span>Mi Perfil
+            </Link>
+            <a href="#" className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
+              <span className="material-symbols-outlined">help</span>Ayuda
+            </a>
             <div className="border-t border-white/10 my-4"></div>
-            <Link to="/login" className="flex items-center gap-3 text-red-400 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"><span className="material-symbols-outlined">logout</span>Cerrar sesión</Link>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"
+            >
+              <span className="material-symbols-outlined">logout</span>Cerrar sesión
+            </button>
           </nav>
         </div>
       </div>
@@ -83,29 +133,31 @@ export default function CiudadanoHome() {
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Greeting */}
         <div className="mb-8">
-          <h1 className="font-headline font-extrabold text-3xl md:text-4xl text-[#003a7a] mb-2">Hola, María 👋</h1>
+          <h1 className="font-headline font-extrabold text-3xl md:text-4xl text-[#003a7a] mb-2">
+            Hola, {firstName} 👋
+          </h1>
           <p className="text-[#424752] text-base">¿Encontraste un problema en tu barrio? Repórtalo y ayuda a mejorar tu comunidad.</p>
         </div>
 
-        {/* Stats */}
+        {/* Stats — TODO: reemplazar mockStats con llamada al Report Service */}
         <div className="flex flex-wrap gap-3 mb-8">
           <div className="bg-white rounded-xl py-3 px-4 shadow-sm flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#c5dcfd] flex items-center justify-center text-[#003a7a] shrink-0">
               <span className="material-symbols-outlined text-base">description</span>
             </div>
-            <p className="font-headline font-bold text-sm"><span className="text-lg">5</span> reportes</p>
+            <p className="font-headline font-bold text-sm"><span className="text-lg">{mockStats.total}</span> reportes</p>
           </div>
           <div className="bg-white rounded-xl py-3 px-4 shadow-sm flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#92400e] shrink-0">
               <span className="material-symbols-outlined text-base">pending</span>
             </div>
-            <p className="font-headline font-bold text-sm"><span className="text-lg">2</span> pendientes</p>
+            <p className="font-headline font-bold text-sm"><span className="text-lg">{mockStats.pendientes}</span> pendientes</p>
           </div>
           <div className="bg-white rounded-xl py-3 px-4 shadow-sm flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center text-[#065f46] shrink-0">
               <span className="material-symbols-outlined text-base">check_circle</span>
             </div>
-            <p className="font-headline font-bold text-sm"><span className="text-lg">3</span> resueltos</p>
+            <p className="font-headline font-bold text-sm"><span className="text-lg">{mockStats.resueltos}</span> resueltos</p>
           </div>
         </div>
 
@@ -146,3 +198,4 @@ export default function CiudadanoHome() {
     </div>
   );
 }
+
