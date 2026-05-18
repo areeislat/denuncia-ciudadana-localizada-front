@@ -29,8 +29,8 @@ dist-ssr
 .env.production
 
 # Documentation files (generated)
-README.md
 DEPLOY.md
 QUICKSTART.md
 COMANDOS_UTILES.md
 MEJORAS_RESPONSIVE.md
+VARIABLES_ENTORNO.md
