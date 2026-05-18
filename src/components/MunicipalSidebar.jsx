@@ -88,21 +88,17 @@ export default function MunicipalSidebar() {
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 overflow-y-auto">
-          {!isSuperAdmin && (
-            <>
-              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">General</p>
-              <Link
-                to="/municipal/gestion/crear"
-                className={`sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm ${
-                  isActive('/municipal/gestion/crear') ? 'sidebar-active text-white' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <span className="material-symbols-outlined text-lg">add_circle</span>
-                <span className="font-headline font-medium">Crear Reporte</span>
-              </Link>
-              <div className="border-t border-white/5 my-2 mx-2"></div>
-            </>
-          )}
+          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">General</p>
+          <Link
+            to="/municipal/gestion/crear"
+            className={`sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm ${
+              isActive('/municipal/gestion/crear') ? 'sidebar-active text-white' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-lg">add_circle</span>
+            <span className="font-headline font-medium">Crear Reporte</span>
+          </Link>
+          <div className="border-t border-white/5 my-2 mx-2"></div>
 
           <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">Gestión</p>
           {items.map((item) => (
@@ -149,15 +145,13 @@ export default function MunicipalSidebar() {
             </div>
           </div>
           <nav className="space-y-1">
-            {!isSuperAdmin && (
-              <Link
-                to="/municipal/gestion/crear"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm"
-              >
-                <span className="material-symbols-outlined">add_circle</span>Crear Reporte
-              </Link>
-            )}
+            <Link
+              to="/municipal/gestion/crear"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm"
+            >
+              <span className="material-symbols-outlined">add_circle</span>Crear Reporte
+            </Link>
             {items.map((item) => (
               <Link
                 key={item.to}

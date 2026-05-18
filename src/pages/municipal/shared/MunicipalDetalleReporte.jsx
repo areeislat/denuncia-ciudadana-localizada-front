@@ -2,6 +2,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import apiClient from '../../../config/api';
 import useAuthStore from '../../../store/authStore';
+import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 const estadoConfig = {
   PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente' },
@@ -11,9 +12,10 @@ const estadoConfig = {
 };
 
 const prioridadConfig = {
-  HIGH:   { label: 'Alta',  clase: 'bg-[#D7141A] text-white' },
-  MEDIUM: { label: 'Media', clase: 'bg-amber-100 text-amber-800' },
-  LOW:    { label: 'Baja',  clase: 'bg-green-100 text-green-800' },
+  HIGH:     { label: 'Alta',    clase: 'bg-[#D7141A] text-white'        },
+  MEDIUM:   { label: 'Media',   clase: 'bg-amber-100 text-amber-800'    },
+  LOW:      { label: 'Baja',    clase: 'bg-green-100 text-green-800'    },
+  CRITICAL: { label: 'Crítica', clase: 'bg-purple-100 text-purple-800'  },
 };
 
 const ESTADOS = ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'];
@@ -21,8 +23,7 @@ const ESTADOS = ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'];
 export default function MunicipalDetalleReporte() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { logout } = useAuthStore();
   const [reporte, setReporte] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -31,11 +32,10 @@ export default function MunicipalDetalleReporte() {
   const [guardando, setGuardando] = useState(false);
   const [errorGuardar, setErrorGuardar] = useState(null);
   const [exito, setExito] = useState(false);
-
-  const initials = user?.fullName
-    ?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
-
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const [nuevaPrioridad, setNuevaPrioridad] = useState('');
+  const [guardandoPrioridad, setGuardandoPrioridad] = useState(false);
+  const [errorPrioridad, setErrorPrioridad] = useState(null);
+  const [exitoPrioridad, setExitoPrioridad] = useState(false);
 
   useEffect(() => {
     const fetchReporte = async () => {
@@ -45,6 +45,7 @@ export default function MunicipalDetalleReporte() {
         const data = await apiClient.get(`/api/reports/${id}`);
         setReporte(data);
         setNuevoEstado(data.status);
+        setNuevaPrioridad(data.priority);
       } catch (err) {
         if (err.response?.status === 401) { logout(); navigate('/login'); }
         else setError('No se pudo cargar el reporte.');
@@ -54,6 +55,22 @@ export default function MunicipalDetalleReporte() {
     };
     fetchReporte();
   }, [id]);
+
+  const handleGuardarPrioridad = async () => {
+    if (!nuevaPrioridad || nuevaPrioridad === reporte?.priority) return;
+    try {
+      setGuardandoPrioridad(true);
+      setErrorPrioridad(null);
+      setExitoPrioridad(false);
+      const data = await apiClient.patch(`/api/reports/${id}/priority`, { priority: nuevaPrioridad });
+      setReporte(data);
+      setExitoPrioridad(true);
+    } catch {
+      setErrorPrioridad('No se pudo actualizar la prioridad. Intenta nuevamente.');
+    } finally {
+      setGuardandoPrioridad(false);
+    }
+  };
 
   const handleGuardarEstado = async () => {
     if (!nuevoEstado || nuevoEstado === reporte?.status) return;
@@ -100,84 +117,7 @@ export default function MunicipalDetalleReporte() {
 
   return (
     <div>
-      {/* SIDEBAR desktop */}
-      <aside className="hidden md:flex flex-col h-screen w-60 fixed left-0 top-0 bg-[#001A33] py-5 z-50">
-        <div className="px-5 mb-6">
-          <h1 className="text-base font-bold text-white font-headline">DESIGEO</h1>
-          <p className="text-slate-400 text-[10px] mt-0.5">Panel de Gestión</p>
-        </div>
-        <div className="px-4 mb-5">
-          <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
-            <div className="w-9 h-9 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold shrink-0">{initials}</div>
-            <div className="min-w-0">
-              <p className="text-white text-xs font-bold truncate">{user?.fullName}</p>
-              <p className="text-slate-400 text-[10px]">Funcionario Municipal</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-0.5 px-2 overflow-y-auto">
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-3 mb-1">Gestión</p>
-          <Link to="/municipal/dashboard" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">dashboard</span>
-            <span className="font-headline font-medium">Dashboard</span>
-          </Link>
-          <Link to="/municipal/gestion" className="sidebar-link sidebar-active rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-white">
-            <span className="material-symbols-outlined text-lg fill-icon">assignment</span>
-            <span className="font-headline font-medium">Gestión Reportes</span>
-          </Link>
-          <Link to="/municipal/usuarios" className="sidebar-link rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-sm text-slate-300 hover:text-white">
-            <span className="material-symbols-outlined text-lg">group</span>
-            <span className="font-headline font-medium">Usuarios</span>
-          </Link>
-        </nav>
-        <div className="px-3 mt-auto">
-          <button onClick={handleLogout} className="text-slate-400 hover:text-white px-2 py-2 flex items-center gap-2 text-sm w-full">
-            <span className="material-symbols-outlined text-lg">logout</span>Cerrar Sesión
-          </button>
-        </div>
-      </aside>
-
-      {/* MOBILE HEADER */}
-      <header className="md:hidden bg-[#001A33] sticky top-0 z-50 shadow-lg px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setMobileMenuOpen(true)} className="text-white">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <button onClick={() => navigate(-1)} className="text-white">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <span className="text-lg font-extrabold text-white font-headline">DESIGEO</span>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold">{initials}</div>
-      </header>
-
-      {/* MOBILE MENU */}
-      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
-        <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)}></div>
-        <div className="mobile-menu-panel">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-white font-headline font-bold">DESIGEO</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-white">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <nav className="space-y-1">
-            <Link to="/municipal/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">dashboard</span>Dashboard
-            </Link>
-            <Link to="/municipal/gestion" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-2.5 px-3 rounded-lg bg-white/10 text-sm">
-              <span className="material-symbols-outlined">assignment</span>Gestión Reportes
-            </Link>
-            <Link to="/municipal/usuarios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">group</span>Usuarios
-            </Link>
-            <div className="border-t border-white/10 my-3"></div>
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 text-sm">
-              <span className="material-symbols-outlined">logout</span>Cerrar sesión
-            </button>
-          </nav>
-        </div>
-      </div>
+      <MunicipalSidebar />
 
       {/* MAIN */}
       <main className="md:ml-60 p-4 md:p-8">
@@ -215,6 +155,51 @@ export default function MunicipalDetalleReporte() {
                   <span className="material-symbols-outlined text-sm">calendar_today</span>
                   <span>{reporte.createdAt ? new Date(reporte.createdAt).toLocaleString('es-CL') : '—'}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Actualizar prioridad */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-[#f5f3f3]">
+              <h3 className="font-headline font-extrabold text-lg text-[#003a7a] mb-4">Asignar Prioridad</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#424752] uppercase tracking-wider mb-1.5">Prioridad</label>
+                  <select
+                    value={nuevaPrioridad}
+                    onChange={(e) => { setNuevaPrioridad(e.target.value); setExitoPrioridad(false); }}
+                    className="w-full bg-[#f5f3f3] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  >
+                    <option value="LOW">Baja</option>
+                    <option value="MEDIUM">Media</option>
+                    <option value="HIGH">Alta</option>
+                    <option value="CRITICAL">Crítica</option>
+                  </select>
+                </div>
+
+                {errorPrioridad && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-4 py-3">{errorPrioridad}</div>
+                )}
+                {exitoPrioridad && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 text-xs rounded-xl px-4 py-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                    Prioridad actualizada correctamente.
+                  </div>
+                )}
+
+                <button
+                  onClick={handleGuardarPrioridad}
+                  disabled={guardandoPrioridad || nuevaPrioridad === reporte.priority}
+                  className="w-full bg-[#0050A5] text-white font-headline font-bold py-3 rounded-xl shadow-sm hover:bg-[#003A7A] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {guardandoPrioridad ? (
+                    <><span className="material-symbols-outlined text-sm animate-spin">progress_activity</span> Guardando...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-sm">flag</span> Guardar prioridad</>
+                  )}
+                </button>
+                {nuevaPrioridad === reporte.priority && (
+                  <p className="text-[10px] text-[#737783] text-center">Selecciona una prioridad diferente a la actual para habilitar el botón.</p>
+                )}
               </div>
             </div>
 

@@ -1,17 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import apiClient from '../../../config/api';
 import useAuthStore from '../../../store/authStore';
 import MunicipalSidebar from '../../../components/MunicipalSidebar';
-
-// TODO: reemplazar con llamada al Report Service cuando esté disponible
-const mockReportes = [
-  { id: '1', folio: '#DEN-2026-0001', titulo: 'Bache en cruce peatonal',       direccion: 'Av. Irarrázaval 3421, Ñuñoa',     categoria: 'Vialidad',       prioridad: 'HIGH',   estado: 'PENDING',     asignadoA: null,             fecha: 'Hace 2h',    municipio: 'Ñuñoa'      },
-  { id: '2', folio: '#DEN-2026-0002', titulo: 'Microbasural Av. Providencia',  direccion: 'Av. Providencia 1240',            categoria: 'Medio Ambiente', prioridad: 'MEDIUM', estado: 'IN_PROGRESS', asignadoA: 'Carlos Fuentes', fecha: 'Ayer 14:30', municipio: 'Providencia' },
-  { id: '3', folio: '#DEN-2026-0003', titulo: 'Luminaria dañada Los Leones',   direccion: 'Calle Los Leones 450',            categoria: 'Luminaria',      prioridad: 'MEDIUM', estado: 'RESOLVED',    asignadoA: 'Ana Torres',     fecha: '3 Oct',      municipio: 'Providencia' },
-  { id: '4', folio: '#DEN-2026-0004', titulo: 'Vehículo mal estacionado',      direccion: 'Pje. Las Orquideas 45',           categoria: 'Tránsito',       prioridad: 'LOW',    estado: 'REJECTED',    asignadoA: null,             fecha: '28 Sep',     municipio: 'Ñuñoa'      },
-  { id: '5', folio: '#DEN-2026-0005', titulo: 'Falla en semáforo',             direccion: 'Av. Grecia con Pedro de Valdivia', categoria: 'Vialidad',       prioridad: 'HIGH',   estado: 'PENDING',     asignadoA: null,             fecha: 'Hace 1h',    municipio: 'Macul'      },
-  { id: '6', folio: '#DEN-2026-0006', titulo: 'Árbol caído en vereda',         direccion: 'Calle Ossa 123, Macul',           categoria: 'Medio Ambiente', prioridad: 'HIGH',   estado: 'IN_PROGRESS', asignadoA: 'Carlos Fuentes', fecha: 'Hoy 08:00',  municipio: 'Macul'      },
-];
 
 const estadoConfig = {
   PENDING:     { label: 'Pendiente', clase: 'badge-pendiente' },
@@ -21,9 +12,10 @@ const estadoConfig = {
 };
 
 const prioridadConfig = {
-  HIGH:   { label: 'Alta',  clase: 'bg-red-100 text-red-700'     },
-  MEDIUM: { label: 'Media', clase: 'bg-amber-100 text-amber-700' },
-  LOW:    { label: 'Baja',  clase: 'bg-green-100 text-green-700' },
+  HIGH:     { label: 'Alta',     clase: 'bg-red-100 text-red-700'       },
+  MEDIUM:   { label: 'Media',    clase: 'bg-amber-100 text-amber-700'   },
+  LOW:      { label: 'Baja',     clase: 'bg-green-100 text-green-700'   },
+  CRITICAL: { label: 'Crítica',  clase: 'bg-purple-100 text-purple-700' },
 };
 
 const filtrosEstado = ['Todos', 'Pendientes', 'En Proceso', 'Resueltos', 'Rechazados'];
@@ -35,17 +27,16 @@ const filtroEstadoMap = {
 export default function MunicipalGestionReportes() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [filtroPrioridad, setFiltroPrioridad] = useState('Todas');
   const [busqueda, setBusqueda] = useState('');
+  const [reportes, setReportes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
   const role = user?.roleName || 'MUNICIPAL_OFFICER';
   const isAdmin      = role === 'ADMIN_MUNICIPAL';
   const isSuperAdmin = role === 'SUPER_ADMIN';
-
-  const initials = user?.fullName
-    ?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
 
   const roleLabel = {
     MUNICIPAL_OFFICER: 'Funcionario Municipal',
@@ -53,30 +44,41 @@ export default function MunicipalGestionReportes() {
     SUPER_ADMIN:       'Super Administrador',
   }[role] || role;
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  useEffect(() => {
+    const fetchReportes = async () => {
+      try {
+        setCargando(true);
+        setError(null);
+        const data = await apiClient.get('/api/reports?page=0&size=100');
+        setReportes(data.reports || []);
+      } catch (err) {
+        if (err.response?.status === 401) { logout(); navigate('/login'); }
+        else setError('No se pudieron cargar los reportes.');
+      } finally {
+        setCargando(false);
+      }
+    };
+    fetchReportes();
+  }, []);
 
-  const reportesFiltrados = mockReportes.filter((r) => {
-    const matchEstado    = !filtroEstadoMap[filtroEstado] || r.estado === filtroEstadoMap[filtroEstado];
-    const matchPrioridad = filtroPrioridad === 'Todas' || r.prioridad === filtroPrioridad;
+  const reportesFiltrados = reportes.filter((r) => {
+    const matchEstado    = !filtroEstadoMap[filtroEstado] || r.status === filtroEstadoMap[filtroEstado];
+    const matchPrioridad = filtroPrioridad === 'Todas' || r.priority === filtroPrioridad;
     const matchBusqueda  = busqueda === '' ||
-      r.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
-      r.folio.toLowerCase().includes(busqueda.toLowerCase()) ||
-      r.direccion.toLowerCase().includes(busqueda.toLowerCase());
+      (r.description || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      (r.reportId || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      (r.address || '').toLowerCase().includes(busqueda.toLowerCase());
     return matchEstado && matchPrioridad && matchBusqueda;
   });
 
   const conteo = (f) => f === 'Todos'
-    ? mockReportes.length
-    : mockReportes.filter((r) => estadoConfig[r.estado].label === f ||
-        r.estado === filtroEstadoMap[f]).length;
+    ? reportes.length
+    : reportes.filter((r) => r.status === filtroEstadoMap[f]).length;
 
   return (
     <div>
       <MunicipalSidebar />
-      
+
       {/* MAIN */}
       <main className="md:ml-60 p-4 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -101,7 +103,7 @@ export default function MunicipalGestionReportes() {
             <span className="material-symbols-outlined text-[#737783] text-sm">search</span>
             <input
               type="text"
-              placeholder="Buscar por folio, título o dirección..."
+              placeholder="Buscar por ID, descripción o dirección..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="flex-1 text-sm outline-none bg-transparent text-[#1b1c1c] placeholder:text-[#737783]"
@@ -140,103 +142,130 @@ export default function MunicipalGestionReportes() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="p-4 md:p-5 border-b border-[#f5f3f3] flex justify-between items-center">
             <h3 className="font-headline font-bold text-sm">
-              {reportesFiltrados.length} reporte{reportesFiltrados.length !== 1 ? 's' : ''}
+              {cargando ? 'Cargando...' : `${reportesFiltrados.length} reporte${reportesFiltrados.length !== 1 ? 's' : ''}`}
             </h3>
           </div>
 
-          {/* Desktop tabla */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#f5f3f3]">
-                <tr>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Folio</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Reporte</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Categoría</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Prioridad</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Estado</th>
-                  {(isAdmin || isSuperAdmin) && (
-                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Asignado a</th>
-                  )}
-                  {isSuperAdmin && (
-                    <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Municipio</th>
-                  )}
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Fecha</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#f5f3f3]">
-                {reportesFiltrados.length === 0 && (
-                  <tr>
-                    <td colSpan="9" className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</td>
-                  </tr>
-                )}
-                {reportesFiltrados.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#f5f3f3]/50 transition-colors">
-                    <td className="px-5 py-3 text-[#003a7a] font-bold text-xs">{r.folio}</td>
-                    <td className="px-5 py-3">
-                      <p className="font-semibold text-[#1b1c1c]">{r.titulo}</p>
-                      <p className="text-[10px] text-[#737783]">{r.direccion}</p>
-                    </td>
-                    <td className="px-5 py-3 text-xs text-[#424752]">{r.categoria}</td>
-                    <td className="px-5 py-3">
-                      <span className={`${prioridadConfig[r.prioridad].clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
-                        {prioridadConfig[r.prioridad].label}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className={`${estadoConfig[r.estado].clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
-                        {estadoConfig[r.estado].label}
-                      </span>
-                    </td>
-                    {(isAdmin || isSuperAdmin) && (
-                      <td className="px-5 py-3 text-xs text-[#424752]">{r.asignadoA || '—'}</td>
-                    )}
-                    {isSuperAdmin && (
-                      <td className="px-5 py-3 text-xs text-[#424752]">{r.municipio}</td>
-                    )}
-                    <td className="px-5 py-3 text-xs text-[#737783]">{r.fecha}</td>
-                    <td className="px-5 py-3">
-                      <Link
-                        to={`/municipal/gestion/${r.id}`}
-                        className="text-[#003a7a] hover:underline font-bold text-xs flex items-center gap-0.5"
-                      >
-                        Ver <span className="material-symbols-outlined text-sm">chevron_right</span>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {cargando && (
+            <div className="flex items-center justify-center gap-3 py-16 text-[#424752]">
+              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span className="text-sm">Cargando reportes...</span>
+            </div>
+          )}
 
-          {/* Mobile cards */}
-          <div className="md:hidden divide-y divide-[#f5f3f3]">
-            {reportesFiltrados.length === 0 && (
-              <p className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</p>
-            )}
-            {reportesFiltrados.map((r) => (
-              <Link
-                key={r.id}
-                to={`/municipal/gestion/${r.id}`}
-                className="block px-4 py-4 hover:bg-[#f5f3f3]/50"
+          {error && !cargando && (
+            <div className="text-center py-16">
+              <p className="text-[#424752] text-sm mb-3">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-[#003a7a] font-bold text-sm hover:underline"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[#003a7a] font-bold text-xs">{r.folio}</span>
-                  <span className="text-[10px] text-[#737783]">{r.fecha}</span>
-                </div>
-                <p className="font-semibold text-[#1b1c1c] text-sm mb-1">{r.titulo}</p>
-                <p className="text-[10px] text-[#737783] mb-3">{r.direccion}</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className={`${estadoConfig[r.estado].clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
-                    {estadoConfig[r.estado].label}
-                  </span>
-                  <span className={`${prioridadConfig[r.prioridad].clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
-                    {prioridadConfig[r.prioridad].label}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+                Reintentar
+              </button>
+            </div>
+          )}
+
+          {!cargando && !error && (
+            <>
+              {/* Desktop tabla */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#f5f3f3]">
+                    <tr>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">ID</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Reporte</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Categoría</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Prioridad</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Estado</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">Fecha</th>
+                      <th className="px-5 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f5f3f3]">
+                    {reportesFiltrados.length === 0 && (
+                      <tr>
+                        <td colSpan="7" className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</td>
+                      </tr>
+                    )}
+                    {reportesFiltrados.map((r) => {
+                      const est = estadoConfig[r.status] || estadoConfig['PENDING'];
+                      const pri = prioridadConfig[r.priority] || prioridadConfig['MEDIUM'];
+                      return (
+                        <tr key={r.reportId} className="hover:bg-[#f5f3f3]/50 transition-colors">
+                          <td className="px-5 py-3 text-[#003a7a] font-bold text-xs font-mono">
+                            #{(r.reportId || '').slice(0, 8).toUpperCase()}
+                          </td>
+                          <td className="px-5 py-3">
+                            <p className="font-semibold text-[#1b1c1c]">{r.description}</p>
+                            <p className="text-[10px] text-[#737783]">{r.address || 'Sin dirección'}</p>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-[#424752]">{r.category || '—'}</td>
+                          <td className="px-5 py-3">
+                            <span className={`${pri.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                              {pri.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className={`${est.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                              {est.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-[#737783]">
+                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-CL') : '—'}
+                          </td>
+                          <td className="px-5 py-3">
+                            <Link
+                              to={`/municipal/gestion/${r.reportId}`}
+                              className="text-[#003a7a] hover:underline font-bold text-xs flex items-center gap-0.5"
+                            >
+                              Ver <span className="material-symbols-outlined text-sm">chevron_right</span>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-[#f5f3f3]">
+                {reportesFiltrados.length === 0 && (
+                  <p className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</p>
+                )}
+                {reportesFiltrados.map((r) => {
+                  const est = estadoConfig[r.status] || estadoConfig['PENDING'];
+                  const pri = prioridadConfig[r.priority] || prioridadConfig['MEDIUM'];
+                  return (
+                    <Link
+                      key={r.reportId}
+                      to={`/municipal/gestion/${r.reportId}`}
+                      className="block px-4 py-4 hover:bg-[#f5f3f3]/50"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[#003a7a] font-bold text-xs font-mono">
+                          #{(r.reportId || '').slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className="text-[10px] text-[#737783]">
+                          {r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-CL') : '—'}
+                        </span>
+                      </div>
+                      <p className="font-semibold text-[#1b1c1c] text-sm mb-1">{r.description}</p>
+                      <p className="text-[10px] text-[#737783] mb-3">{r.address || 'Sin dirección'}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`${est.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                          {est.label}
+                        </span>
+                        <span className={`${pri.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                          {pri.label}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </main>
     </div>
