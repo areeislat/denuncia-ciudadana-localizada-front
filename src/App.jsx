@@ -3,9 +3,6 @@ import Home from './pages/public/Home';
 import Login from './pages/public/Login';
 import Registro from './pages/public/Registro';
 import Recuperar from './pages/public/Recuperar';
-import Ayuda from './pages/Ayuda';
-import TerminosYPrivacidad from './pages/TerminosYPrivacidad';
-import Transparencia from './pages/Transparencia';
 
 // Ciudadano
 import CiudadanoHome from './pages/ciudadano/CiudadanoHome';
@@ -17,10 +14,10 @@ import CiudadanoPerfil from './pages/ciudadano/CiudadanoPerfil';
 // Municipal shared
 import MunicipalDashboard from './pages/municipal/shared/MunicipalDashboard';
 import MunicipalGestionReportes from './pages/municipal/shared/MunicipalGestionReportes';
-import MunicipalDetalleReporte from './pages/municipal/shared/MunicipalDetalleReporte';
+import MunicipalCrearReporte from './pages/municipal/shared/MunicipalCrearReporte';
+
 
 // Municipal Officer
-import MunicipalGestionUsuarios from './pages/municipal/municipal_officer/MunicipalGestionUsuarios';
 
 // Admin Municipal
 import AdminGestionUsuarios from './pages/municipal/admin_municipal/AdminGestionUsuarios';
@@ -62,9 +59,6 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar" element={<Recuperar />} />
-        <Route path="/terminos" element={<TerminosYPrivacidad />} />
-        <Route path="/transparencia" element={<Transparencia />} />
-        <Route path="/ayuda" element={<Ayuda />} />
 
         {/* ── CIUDADANO ── */}
         <Route path="/ciudadano" element={
@@ -90,14 +84,10 @@ function App() {
         <Route path="/municipal/gestion" element={
           <PrivateRoute roles={MUNICIPALES}><MunicipalGestionReportes /></PrivateRoute>
         } />
-        <Route path="/municipal/gestion/:id" element={
-          <PrivateRoute roles={MUNICIPALES}><MunicipalDetalleReporte /></PrivateRoute>
+        <Route path="/municipal/gestion/crear" element={
+        <PrivateRoute roles={MUNICIPALES}><MunicipalCrearReporte /></PrivateRoute>
         } />
 
-        {/* ── MUNICIPAL OFFICER ── */}
-        <Route path="/municipal/usuarios" element={
-          <PrivateRoute roles={[ROLES.OFFICER]}><MunicipalGestionUsuarios /></PrivateRoute>
-        } />
 
         {/* ── ADMIN MUNICIPAL ── */}
         <Route path="/admin/usuarios" element={
