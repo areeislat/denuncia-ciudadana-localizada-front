@@ -15,6 +15,7 @@ import CiudadanoPerfil from './pages/ciudadano/CiudadanoPerfil';
 import MunicipalDashboard from './pages/municipal/shared/MunicipalDashboard';
 import MunicipalGestionReportes from './pages/municipal/shared/MunicipalGestionReportes';
 import MunicipalCrearReporte from './pages/municipal/shared/MunicipalCrearReporte';
+import MunicipalDetalleReporte from './pages/municipal/shared/MunicipalDetalleReporte';
 
 
 // Municipal Officer
@@ -85,7 +86,10 @@ function App() {
           <PrivateRoute roles={MUNICIPALES}><MunicipalGestionReportes /></PrivateRoute>
         } />
         <Route path="/municipal/gestion/crear" element={
-        <PrivateRoute roles={MUNICIPALES}><MunicipalCrearReporte /></PrivateRoute>
+          <PrivateRoute roles={MUNICIPALES}><MunicipalCrearReporte /></PrivateRoute>
+        } />
+        <Route path="/municipal/gestion/:id" element={
+          <PrivateRoute roles={MUNICIPALES}><MunicipalDetalleReporte /></PrivateRoute>
         } />
 
 

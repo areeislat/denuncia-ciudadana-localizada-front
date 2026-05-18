@@ -10,7 +10,7 @@ export default function CiudadanoCrear() {
   const { user, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [form, setForm] = useState({ description: '', address: '' });
+  const [form, setForm] = useState({ category: 'Bache / Pavimento', description: '', address: '' });
   const [coords, setCoords] = useState({ lat: -33.4569, lng: -70.6483 });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
@@ -35,6 +35,7 @@ export default function CiudadanoCrear() {
     setEnviando(true);
     try {
       await apiClient.post('/api/reports', {
+        category: form.category,
         description: form.description,
         latitude: coords.lat,
         longitude: coords.lng,
@@ -160,6 +161,22 @@ export default function CiudadanoCrear() {
         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
           {/* Left: Form */}
           <div className="space-y-5">
+            <div>
+              <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Categoría</label>
+              <select
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                className="w-full bg-[#e4e2e2] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#003a7a]"
+              >
+                <option>Bache / Pavimento</option>
+                <option>Luminaria Dañada</option>
+                <option>Basura Ilegal</option>
+                <option>Microbasural</option>
+                <option>Infraestructura Vial</option>
+                <option>Otro</option>
+              </select>
+            </div>
             <div>
               <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Descripción del Problema</label>
               <textarea
