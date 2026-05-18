@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MapComponent from '../../components/MapComponent';
 import useAuthStore from '../../store/authStore';
+import apiClient from '../../config/api';
+import CiudadanoFooter from '../../components/CiudadanoFooter';
 
 const mockMarkers = [
   { lat: -33.423, lng: -70.615, title: 'Bache en cruce peatonal', status: 'Pendiente', color: '#dc2626', n: 12 },
@@ -12,16 +14,10 @@ const mockMarkers = [
   { lat: -33.434, lng: -70.612, title: 'Basura ilegal', status: 'En Proceso', color: '#2563eb', n: 7 },
 ];
 
-// TODO: reemplazar con llamada real al Report Service cuando esté disponible
-const mockStats = {
-  total: 5,
-  pendientes: 2,
-  resueltos: 3,
-};
-
 export default function CiudadanoHome() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [stats, setStats] = useState({ total: 0, pendientes: 0, resueltos: 0 });
 
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -39,6 +35,26 @@ export default function CiudadanoHome() {
     navigate('/login');
   };
 
+  // Fetch real stats from the Report Service
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        if (!user?.userId) return;
+        const data = await apiClient.get(`/api/reports/user/${user.userId}`);
+        const reportes = data.reports || [];
+        setStats({
+          total: reportes.length,
+          pendientes: reportes.filter((r) => r.status === 'PENDING' || r.status === 'IN_PROGRESS').length,
+          resueltos: reportes.filter((r) => r.status === 'RESOLVED').length,
+        });
+      } catch {
+        // Si falla, dejar en 0
+        setStats({ total: 0, pendientes: 0, resueltos: 0 });
+      }
+    };
+    fetchStats();
+  }, [user?.userId]);
+
   return (
     <div>
       {/* HEADER */}
@@ -48,7 +64,7 @@ export default function CiudadanoHome() {
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/ciudadano" className="text-white font-headline font-bold text-sm border-b-2 border-[#D7141A] pb-1">Inicio</Link>
             <Link to="/ciudadano/reportes" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Mis Reportes</Link>
-            <a href="#" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Ayuda</a>
+            <Link to="/ayuda" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Ayuda</Link>
           </nav>
           <div className="flex items-center gap-3">
             <button className="text-white hover:bg-white/10 rounded-md p-2">
@@ -116,9 +132,9 @@ export default function CiudadanoHome() {
             <Link to="/ciudadano/perfil" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
               <span className="material-symbols-outlined">person</span>Mi Perfil
             </Link>
-            <a href="#" className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
+            <Link to="/ayuda" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
               <span className="material-symbols-outlined">help</span>Ayuda
-            </a>
+            </Link>
             <div className="border-t border-white/10 my-4"></div>
             <button
               onClick={handleLogout}
@@ -139,25 +155,25 @@ export default function CiudadanoHome() {
           <p className="text-[#424752] text-base">¿Encontraste un problema en tu barrio? Repórtalo y ayuda a mejorar tu comunidad.</p>
         </div>
 
-        {/* Stats — TODO: reemplazar mockStats con llamada al Report Service */}
+        {/* Stats — datos reales del Report Service */}
         <div className="flex flex-wrap gap-3 mb-8">
           <div className="bg-white rounded-xl py-3 px-4 shadow-sm flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#c5dcfd] flex items-center justify-center text-[#003a7a] shrink-0">
               <span className="material-symbols-outlined text-base">description</span>
             </div>
-            <p className="font-headline font-bold text-sm"><span className="text-lg">{mockStats.total}</span> reportes</p>
+            <p className="font-headline font-bold text-sm"><span className="text-lg">{stats.total}</span> reportes</p>
           </div>
           <div className="bg-white rounded-xl py-3 px-4 shadow-sm flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#92400e] shrink-0">
               <span className="material-symbols-outlined text-base">pending</span>
             </div>
-            <p className="font-headline font-bold text-sm"><span className="text-lg">{mockStats.pendientes}</span> pendientes</p>
+            <p className="font-headline font-bold text-sm"><span className="text-lg">{stats.pendientes}</span> pendientes</p>
           </div>
           <div className="bg-white rounded-xl py-3 px-4 shadow-sm flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center text-[#065f46] shrink-0">
               <span className="material-symbols-outlined text-base">check_circle</span>
             </div>
-            <p className="font-headline font-bold text-sm"><span className="text-lg">{mockStats.resueltos}</span> resueltos</p>
+            <p className="font-headline font-bold text-sm"><span className="text-lg">{stats.resueltos}</span> resueltos</p>
           </div>
         </div>
 
@@ -190,11 +206,7 @@ export default function CiudadanoHome() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-[#001A33] py-8 px-4 mt-12">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-slate-500 text-xs">&copy; 2026 DESIGEO — Plataforma de Denuncia Ciudadana Geolocalizada</p>
-        </div>
-      </footer>
+      <CiudadanoFooter />
     </div>
   );
 }
