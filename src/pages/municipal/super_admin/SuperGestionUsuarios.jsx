@@ -108,7 +108,11 @@ export default function SuperGestionUsuarios() {
     try {
       setCreando(true);
       setErrorCrear(null);
-      const { data } = await axios.post(API_URL, crearForm, {
+      const payload = {
+        ...crearForm,
+        rut: crearForm.rut.replace(/\./g, '').replace(/-/g, '').toUpperCase(),
+      };
+      const { data } = await axios.post(API_URL, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsuarios((prev) => [...prev, data]);

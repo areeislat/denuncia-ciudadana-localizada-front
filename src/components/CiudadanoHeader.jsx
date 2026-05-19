@@ -38,7 +38,7 @@ export default function CiudadanoHeader({ activePage = '' }) {
           <nav className="hidden md:flex items-center gap-6">
             {navLink('/ciudadano', 'Inicio', 'inicio')}
             {navLink('/ciudadano/reportes', 'Mis Reportes', 'reportes')}
-            {navLink('/ayuda', 'Ayuda', 'ayuda')}
+            <span className="font-headline font-bold text-sm text-slate-500 cursor-not-allowed">Ayuda</span>
           </nav>
           <div className="flex items-center gap-3">
             <button className="text-white hover:bg-white/10 rounded-md p-2">
@@ -106,9 +106,9 @@ export default function CiudadanoHeader({ activePage = '' }) {
             <Link to="/ciudadano/perfil" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 font-headline font-medium py-3 px-4 rounded-lg ${activePage === 'perfil' ? 'text-white bg-white/10' : 'text-slate-300 hover:bg-white/5'}`}>
               <span className="material-symbols-outlined">person</span>Mi Perfil
             </Link>
-            <Link to="/ayuda" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 font-headline font-medium py-3 px-4 rounded-lg ${activePage === 'ayuda' ? 'text-white bg-white/10' : 'text-slate-300 hover:bg-white/5'}`}>
+            <span className="flex items-center gap-3 font-headline font-medium py-3 px-4 rounded-lg text-slate-500 cursor-not-allowed">
               <span className="material-symbols-outlined">help</span>Ayuda
-            </Link>
+            </span>
             <div className="border-t border-white/10 my-4"></div>
             <button onClick={handleLogout} className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
               <span className="material-symbols-outlined">logout</span>Cerrar sesión
