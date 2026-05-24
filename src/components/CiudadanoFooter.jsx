@@ -13,15 +13,15 @@ export default function CiudadanoFooter() {
         <div>
           <h4 className="font-headline font-bold text-white text-sm mb-3">Enlaces</h4>
           <div className="flex flex-col gap-2">
-            <Link to="/terminos" className="text-slate-400 hover:text-white text-sm">
+            <span className="text-slate-500 text-sm cursor-not-allowed">
               Términos de Uso y Privacidad
-            </Link>
-            <Link to="/transparencia" className="text-slate-400 hover:text-white text-sm">
+            </span>
+            <span className="text-slate-500 text-sm cursor-not-allowed">
               Transparencia
-            </Link>
-            <Link to="/ayuda" className="text-slate-400 hover:text-white text-sm">
+            </span>
+            <span className="text-slate-500 text-sm cursor-not-allowed">
               Ayuda
-            </Link>
+            </span>
           </div>
         </div>
         <div>
