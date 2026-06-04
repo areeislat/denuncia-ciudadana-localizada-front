@@ -133,6 +133,7 @@ export default function SuperGestionUsuarios() {
       const payload = {
         ...crearForm,
         comunaId: crearForm.comunaId !== '' ? Number(crearForm.comunaId) : null,
+        rut: crearForm.rut.replace(/\./g, '').replace(/-/g, '').toUpperCase(),
       };
       const { data } = await axios.post(API_URL, payload, {
         headers: { Authorization: `Bearer ${token}` },
