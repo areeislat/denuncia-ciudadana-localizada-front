@@ -5,23 +5,24 @@ import useAuthStore from '../store/authStore';
 
 const navItems = (role) => {
   const base = [
-    { label: 'Dashboard',        icon: 'dashboard',  to: '/municipal/dashboard' },
-    { label: 'Gestión Reportes', icon: 'assignment', to: '/municipal/gestion'   },
+    { label: 'Dashboard', icon: 'dashboard', to: '/municipal/dashboard' },
   ];
 
-  if (role === 'ADMIN_MUNICIPAL' ) {
-    base.push({ label: 'Usuarios',      icon: 'group',     to: '/admin/usuarios'      });
-    base.push({ label: 'Estadísticas',  icon: 'bar_chart', to: '/admin/estadisticas'  });
-    base.push({ label: 'Configuración', icon: 'settings',  to: '/admin/configuracion' });
-  }
-
   if (role === 'SUPER_ADMIN') {
-  base.push({ label: 'Municipalidades', icon: 'location_city', to: '/super/municipalidades' });
-  base.push({ label: 'Usuarios',        icon: 'group',         to: '/super/usuarios'        });
-  base.push({ label: 'Estadísticas',    icon: 'bar_chart',     to: '/admin/estadisticas'    });
-  base.push({ label: 'Configuración',   icon: 'settings',      to: '/admin/configuracion'   });
-  base.push({ label: 'Auditoría',       icon: 'policy',        to: '/super/auditoria'       });
-}
+    base.push({ label: 'Gestión Reportes', icon: 'assignment',    to: '/super/reportes'        });
+    base.push({ label: 'Municipalidades',  icon: 'location_city', to: '/super/municipalidades' });
+    base.push({ label: 'Usuarios',         icon: 'group',         to: '/super/usuarios'        });
+    base.push({ label: 'Estadísticas',     icon: 'bar_chart',     to: '/super/estadisticas'    });
+    base.push({ label: 'Auditoría',        icon: 'policy',        to: '/super/auditoria'       });
+  } else {
+    base.push({ label: 'Gestión Reportes', icon: 'assignment', to: '/municipal/gestion' });
+
+    if (role === 'ADMIN_MUNICIPAL') {
+      base.push({ label: 'Usuarios',      icon: 'group',     to: '/admin/usuarios'      });
+      base.push({ label: 'Estadísticas',  icon: 'bar_chart', to: '/admin/estadisticas'  });
+      base.push({ label: 'Configuración', icon: 'settings',  to: '/admin/configuracion' });
+    }
+  }
 
   return base;
 };
@@ -34,7 +35,6 @@ export default function MunicipalSidebar() {
 
   const role = user?.roleName || 'MUNICIPAL_OFFICER';
   const items = navItems(role);
-  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const initials = user?.fullName
     ?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
