@@ -3,6 +3,9 @@ import Home from './pages/public/Home';
 import Login from './pages/public/Login';
 import Registro from './pages/public/Registro';
 import Recuperar from './pages/public/Recuperar';
+import Ayuda from './pages/Ayuda';
+import TerminosYPrivacidad from './pages/TerminosYPrivacidad';
+import Transparencia from './pages/Transparencia';
 
 // Ciudadano
 import CiudadanoHome from './pages/ciudadano/CiudadanoHome';
@@ -29,6 +32,10 @@ import AdminEstadisticas from './pages/municipal/admin_municipal/AdminEstadistic
 import SuperGestionUsuarios from './pages/municipal/super_admin/SuperGestionUsuarios';
 import SuperGestionMunicipalidades from './pages/municipal/super_admin/SuperGestionMunicipalidades';
 import SuperAuditoriaLogs from './pages/municipal/super_admin/SuperAuditoriaLogs';
+import SuperConfiguracion from './pages/municipal/super_admin/SuperConfiguracion';
+import SuperEstadisticas from './pages/municipal/super_admin/SuperEstadisticas';
+import SuperGestionReportes from './pages/municipal/super_admin/SuperGestionReportes';
+
 
 import useAuthStore from './store/authStore';
 
@@ -60,6 +67,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar" element={<Recuperar />} />
+        <Route path="/ayuda" element={<Ayuda />} />
+        <Route path="/terminos" element={<TerminosYPrivacidad />} />
+        <Route path="/transparencia" element={<Transparencia />} />
 
         {/* ── CIUDADANO ── */}
         <Route path="/ciudadano" element={
@@ -113,6 +123,15 @@ function App() {
         } />
         <Route path="/super/auditoria" element={
           <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperAuditoriaLogs /></PrivateRoute>
+        } />
+        <Route path="/super/configuracion" element={
+          <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperConfiguracion /></PrivateRoute>
+        } />
+        <Route path="/super/estadisticas" element={
+          <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperEstadisticas /></PrivateRoute>
+        } />
+        <Route path="/super/reportes" element={
+        <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperGestionReportes /></PrivateRoute>
         } />
 
         {/* Fallback */}

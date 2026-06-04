@@ -1,14 +1,13 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../../../config/api';
-import useAuthStore from '../../../store/authStore';
 import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 const estadoConfig = {
-  PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente' },
-  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso'   },
-  RESOLVED:    { label: 'Resuelto',   clase: 'badge-resuelto'  },
-  REJECTED:    { label: 'Rechazado',  clase: 'badge-rechazado' },
+  PENDING:     { label: 'Pendiente',  clase: 'bg-amber-100 text-amber-700'   },
+  IN_PROGRESS: { label: 'En Proceso', clase: 'bg-blue-100 text-blue-700'     },
+  RESOLVED:    { label: 'Resuelto',   clase: 'bg-green-100 text-green-700'   },
+  REJECTED:    { label: 'Rechazado',  clase: 'bg-red-100 text-red-700'       },
   REOPENED:    { label: 'Reabierto',  clase: 'bg-purple-100 text-purple-700' },
 };
 
@@ -20,52 +19,57 @@ const prioridadConfig = {
 };
 
 const filtrosEstado = [
-  { label: 'Todos',      value: ''           },
-  { label: 'Pendientes', value: 'PENDING'     },
-  { label: 'En Proceso', value: 'IN_PROGRESS' },
-  { label: 'Resueltos',  value: 'RESOLVED'    },
-  { label: 'Rechazados', value: 'REJECTED'    },
-  { label: 'Reabiertos', value: 'REOPENED'    },
+  { label: 'Todos',       value: ''            },
+  { label: 'Pendientes',  value: 'PENDING'      },
+  { label: 'En Proceso',  value: 'IN_PROGRESS'  },
+  { label: 'Resueltos',   value: 'RESOLVED'     },
+  { label: 'Rechazados',  value: 'REJECTED'     },
+  { label: 'Reabiertos',  value: 'REOPENED'     },
 ];
 
-export default function MunicipalGestionReportes() {
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
-
-  const [reportes, setReportes]     = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [cargando, setCargando]     = useState(true);
-  const [error, setError]           = useState(null);
-  const [total, setTotal]           = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [page, setPage]             = useState(0);
+export default function SuperGestionReportes() {
+  const [reportes, setReportes]       = useState([]);
+  const [comunas, setComunas]         = useState([]);
+  const [categorias, setCategorias]   = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [total, setTotal]             = useState(0);
+  const [totalPages, setTotalPages]   = useState(0);
+  const [page, setPage]               = useState(0);
 
   const [filtroEstado,    setFiltroEstado]    = useState('');
+  const [filtroComuna,    setFiltroComuna]    = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroPrioridad, setFiltroPrioridad] = useState('');
   const [busqueda,        setBusqueda]        = useState('');
 
   const PAGE_SIZE = 20;
-  const comunaId  = user?.comunaId;
-  const role      = user?.roleName;
 
-  // ── Cargar categorías ───────────────────────────────────────────
+  // ── Cargar comunas y categorías ─────────────────────────────────
   useEffect(() => {
-    apiClient.get('/api/analytics/categorias')
-      .then((data) => setCategorias(data))
-      .catch((err) => console.error('Error cargando categorías:', err));
+    const fetchFiltros = async () => {
+      try {
+        const [comunasData, categoriasData] = await Promise.all([
+          apiClient.get('/api/comunas'),
+          apiClient.get('/api/analytics/categorias'),
+        ]);
+        setComunas(comunasData);
+        setCategorias(categoriasData);
+      } catch (err) {
+        console.error('Error cargando filtros:', err);
+      }
+    };
+    fetchFiltros();
   }, []);
 
   // ── Cargar reportes ─────────────────────────────────────────────
   const fetchReportes = useCallback(async (currentPage = 0) => {
     try {
-      setCargando(true);
+      setLoading(true);
       setError(null);
-
       const params = new URLSearchParams();
-      // MUNICIPAL_OFFICER y ADMIN_MUNICIPAL siempre filtran por su comuna
-      if (comunaId) params.append('comunaId', comunaId);
-      if (filtroEstado)    params.append('status',   filtroEstado);
+      if (filtroComuna)    params.append('comunaId', filtroComuna);
+      if (filtroEstado)    params.append('status', filtroEstado);
       if (filtroCategoria) params.append('category', filtroCategoria);
       if (filtroPrioridad) params.append('priority', filtroPrioridad);
       params.append('page', currentPage);
@@ -77,12 +81,11 @@ export default function MunicipalGestionReportes() {
       setTotalPages(data.totalPages || 0);
       setPage(currentPage);
     } catch (err) {
-      if (err.response?.status === 401) { logout(); navigate('/login'); }
-      else setError('No se pudieron cargar los reportes.');
+      setError('No se pudieron cargar los reportes.');
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
-  }, [comunaId, filtroEstado, filtroCategoria, filtroPrioridad]);
+  }, [filtroComuna, filtroEstado, filtroCategoria, filtroPrioridad]);
 
   useEffect(() => {
     fetchReportes(0);
@@ -93,15 +96,16 @@ export default function MunicipalGestionReportes() {
     if (busqueda === '') return true;
     const q = busqueda.toLowerCase();
     return (
-      (r.description || '').toLowerCase().includes(q) ||
-      (r.reportId    || '').toLowerCase().includes(q) ||
-      (r.address     || '').toLowerCase().includes(q)
+      r.description?.toLowerCase().includes(q) ||
+      r.reportId?.toLowerCase().includes(q) ||
+      r.address?.toLowerCase().includes(q)
     );
   });
 
-  const conteo = (value) => value === ''
-    ? reportes.length
-    : reportes.filter((r) => r.status === value).length;
+  const getNombreComuna = (id) => {
+    const c = comunas.find((c) => c.comunaId === id || c.comunaId === Number(id));
+    return c?.nombre || `Comuna ${id}`;
+  };
 
   const formatFecha = (iso) => {
     if (!iso) return '—';
@@ -119,15 +123,13 @@ export default function MunicipalGestionReportes() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl md:text-3xl font-extrabold text-[#1b1c1c] font-headline mb-1">Gestión de Reportes</h2>
-            <p className="text-[#424752] text-sm">
-              {role === 'ADMIN_MUNICIPAL' ? 'Tu municipio' : 'Reportes asignados a ti'}
-              {' — '}{total} reporte{total !== 1 ? 's' : ''} en total.
-            </p>
+            <p className="text-[#424752] text-sm">Todos los municipios — {total} reporte{total !== 1 ? 's' : ''} en total.</p>
           </div>
         </div>
 
         {/* Filtros */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-[#f5f3f3] mb-4 flex flex-col gap-3">
+          {/* Búsqueda */}
           <div className="flex items-center gap-2 border border-[#e4e2e2] rounded-lg px-3 py-2">
             <span className="material-symbols-outlined text-[#737783] text-sm">search</span>
             <input
@@ -139,7 +141,19 @@ export default function MunicipalGestionReportes() {
             />
           </div>
 
+          {/* Selectores */}
           <div className="flex flex-wrap gap-3">
+            <select
+              value={filtroComuna}
+              onChange={(e) => setFiltroComuna(e.target.value)}
+              className="text-sm border border-[#e4e2e2] rounded-lg px-3 py-2 text-[#1b1c1c] outline-none focus:border-[#003a7a]"
+            >
+              <option value="">Todas las comunas</option>
+              {comunas.map((c) => (
+                <option key={c.comunaId} value={c.comunaId}>{c.nombre}</option>
+              ))}
+            </select>
+
             <select
               value={filtroCategoria}
               onChange={(e) => setFiltroCategoria(e.target.value)}
@@ -172,39 +186,31 @@ export default function MunicipalGestionReportes() {
                 onClick={() => setFiltroEstado(f.value)}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
                   filtroEstado === f.value
-                    ? 'bg-[#003a7a] text-white shadow-sm'
+                    ? 'bg-[#003a7a] text-white'
                     : 'bg-[#eae8e7] text-[#424752] hover:bg-[#dbd9d9]'
                 }`}
               >
-                {f.label} ({conteo(f.value)})
+                {f.label}
               </button>
             ))}
           </div>
         </div>
 
         {/* Estado carga / error */}
-        {cargando && (
-          <div className="flex items-center justify-center gap-3 py-16 text-[#424752]">
-            <span className="material-symbols-outlined animate-spin">progress_activity</span>
-            <span className="text-sm">Cargando reportes...</span>
+        {loading && (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-[#003a7a] border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
-        {error && !cargando && (
-          <div className="text-center py-16">
-            <p className="text-[#424752] text-sm mb-3">{error}</p>
-            <button onClick={() => fetchReportes(0)} className="text-[#003a7a] font-bold text-sm hover:underline">
-              Reintentar
-            </button>
-          </div>
+        {error && !loading && (
+          <div className="text-center py-12 text-[#ba1a1a] text-sm">{error}</div>
         )}
 
         {/* Tabla */}
-        {!cargando && !error && (
+        {!loading && !error && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-[#f5f3f3]">
-              <h3 className="font-headline font-bold text-sm">
-                {reportesFiltrados.length} reporte{reportesFiltrados.length !== 1 ? 's' : ''}
-              </h3>
+              <h3 className="font-headline font-bold text-sm">{reportesFiltrados.length} resultado{reportesFiltrados.length !== 1 ? 's' : ''}</h3>
             </div>
 
             {/* Desktop */}
@@ -212,19 +218,17 @@ export default function MunicipalGestionReportes() {
               <table className="w-full text-sm">
                 <thead className="bg-[#f5f3f3]">
                   <tr>
-                    {['ID', 'Reporte', 'Categoría', 'Prioridad', 'Estado', 'Fecha', ''].map((h) => (
+                    {['ID', 'Reporte', 'Comuna', 'Categoría', 'Prioridad', 'Estado', 'Fecha', ''].map((h) => (
                       <th key={h} className="text-left px-5 py-3 text-[10px] font-bold text-[#737783] uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f5f3f3]">
                   {reportesFiltrados.length === 0 && (
-                    <tr>
-                      <td colSpan="7" className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</td>
-                    </tr>
+                    <tr><td colSpan="8" className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</td></tr>
                   )}
                   {reportesFiltrados.map((r) => {
-                    const est = estadoConfig[r.status]      || estadoConfig['PENDING'];
+                    const est = estadoConfig[r.status]    || estadoConfig['PENDING'];
                     const pri = prioridadConfig[r.priority] || prioridadConfig['MEDIUM'];
                     return (
                       <tr key={r.reportId} className="hover:bg-[#f5f3f3]/50 transition-colors">
@@ -233,7 +237,10 @@ export default function MunicipalGestionReportes() {
                         </td>
                         <td className="px-5 py-3 max-w-xs">
                           <p className="font-semibold text-[#1b1c1c] truncate">{r.description}</p>
-                          <p className="text-[10px] text-[#737783] truncate">{r.address || 'Sin dirección'}</p>
+                          <p className="text-[10px] text-[#737783] truncate">{r.address || '—'}</p>
+                        </td>
+                        <td className="px-5 py-3 text-xs text-[#424752]">
+                          {r.comunaId ? getNombreComuna(r.comunaId) : '—'}
                         </td>
                         <td className="px-5 py-3 text-xs text-[#424752]">{r.category || '—'}</td>
                         <td className="px-5 py-3">
@@ -270,7 +277,7 @@ export default function MunicipalGestionReportes() {
                 <p className="text-center text-[#424752] text-sm py-12">No hay reportes que coincidan.</p>
               )}
               {reportesFiltrados.map((r) => {
-                const est = estadoConfig[r.status]      || estadoConfig['PENDING'];
+                const est = estadoConfig[r.status]    || estadoConfig['PENDING'];
                 const pri = prioridadConfig[r.priority] || prioridadConfig['MEDIUM'];
                 return (
                   <Link key={r.reportId} to={`/municipal/gestion/${r.reportId}`} className="block px-4 py-4 hover:bg-[#f5f3f3]/50">
@@ -281,7 +288,8 @@ export default function MunicipalGestionReportes() {
                       <span className="text-[10px] text-[#737783]">{formatFecha(r.createdAt)}</span>
                     </div>
                     <p className="font-semibold text-[#1b1c1c] text-sm mb-1">{r.description}</p>
-                    <p className="text-[10px] text-[#737783] mb-3">{r.address || 'Sin dirección'}</p>
+                    <p className="text-[10px] text-[#737783] mb-1">{r.address || '—'}</p>
+                    <p className="text-[10px] text-[#737783] mb-3">{r.comunaId ? getNombreComuna(r.comunaId) : '—'}</p>
                     <div className="flex flex-wrap gap-2">
                       <span className={`text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full ${est.clase}`}>{est.label}</span>
                       <span className={`text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full ${pri.clase}`}>{pri.label}</span>

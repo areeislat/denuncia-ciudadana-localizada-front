@@ -12,7 +12,7 @@ const roleConfig = {
 };
 
 export default function AdminGestionUsuarios() {
-  const { token, logout } = useAuthStore();
+  const { token, user, logout} = useAuthStore();
   const navigate = useNavigate();
 
   const [usuarios, setUsuarios]         = useState([]);
@@ -33,7 +33,9 @@ export default function AdminGestionUsuarios() {
       try {
         setCargando(true);
         setError(null);
-        const { data } = await axios.get(API_URL, {
+        const comunaId = user?.comunaId;
+        const url = comunaId ? `${API_URL}?comunaId=${comunaId}` : API_URL;
+        const { data } = await axios.get(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const filtered = data.filter((u) =>
