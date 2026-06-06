@@ -5,10 +5,12 @@ import useAuthStore from '../../../store/authStore';
 import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 const estadoConfig = {
-  PENDING:     { label: 'Pendiente', clase: 'badge-pendiente' },
-  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso'  },
-  RESOLVED:    { label: 'Resuelto',  clase: 'badge-resuelto'  },
-  REJECTED:    { label: 'Rechazado', clase: 'badge-rechazado' },
+  PENDING:          { label: 'Pendiente',            clase: 'badge-pendiente' },
+  IN_PROGRESS:      { label: 'En Proceso',            clase: 'badge-proceso'   },
+  RESOLVED:         { label: 'Resuelto',              clase: 'badge-resuelto'  },
+  REJECTED:         { label: 'Rechazado',             clase: 'badge-rechazado' },
+  REOPENED:         { label: 'Reabierto',             clase: 'badge-proceso'   },
+  REOPEN_REQUESTED: { label: 'Reapertura Solicitada', clase: 'bg-amber-100 text-amber-800' },
 };
 
 const prioridadConfig = {
@@ -18,10 +20,10 @@ const prioridadConfig = {
   CRITICAL: { label: 'Crítica',  clase: 'bg-purple-100 text-purple-700' },
 };
 
-const filtrosEstado = ['Todos', 'Pendientes', 'En Proceso', 'Resueltos', 'Rechazados'];
+const filtrosEstado = ['Todos', 'Pendientes', 'En Proceso', 'Resueltos', 'Rechazados', 'Reapertura'];
 const filtroEstadoMap = {
   'Todos': null, 'Pendientes': 'PENDING', 'En Proceso': 'IN_PROGRESS',
-  'Resueltos': 'RESOLVED', 'Rechazados': 'REJECTED',
+  'Resueltos': 'RESOLVED', 'Rechazados': 'REJECTED', 'Reapertura': 'REOPEN_REQUESTED',
 };
 
 export default function MunicipalGestionReportes() {

@@ -15,8 +15,16 @@ const mockMarkers = [
   { lat: -33.434, lng: -70.612, title: 'Basura ilegal', status: 'En Proceso', color: '#2563eb', n: 7 },
 ];
 
+const estadoConfig = {
+  PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente' },
+  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso'   },
+  RESOLVED:    { label: 'Resuelto',   clase: 'badge-resuelto'  },
+  REJECTED:    { label: 'Rechazado',  clase: 'badge-rechazado' },
+};
+
 export default function CiudadanoHome() {
   const [stats, setStats] = useState({ total: 0, pendientes: 0, resueltos: 0 });
+  const [reportesRecientes, setReportesRecientes] = useState([]);
 
   const { user } = useAuthStore();
 
@@ -37,7 +45,18 @@ export default function CiudadanoHome() {
         setStats({ total: 0, pendientes: 0, resueltos: 0 });
       }
     };
+
+    const fetchFeed = async () => {
+      try {
+        const data = await apiClient.get('/api/reports?page=0&size=10');
+        setReportesRecientes(data.reports || []);
+      } catch {
+        // silencioso
+      }
+    };
+
     fetchStats();
+    fetchFeed();
   }, [user?.userId]);
 
   return (
@@ -100,6 +119,48 @@ export default function CiudadanoHome() {
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#f97316] inline-block"></span> Asignado</span>
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#16a34a] inline-block"></span> Resuelto</span>
           </div>
+        </div>
+        {/* Reportes recientes de la comunidad */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-headline font-bold text-xl">Reportes Recientes</h2>
+            <span className="text-xs text-[#737783]">Últimos 10 de la comunidad</span>
+          </div>
+          {reportesRecientes.length === 0 ? (
+            <p className="text-sm text-[#424752] text-center py-8">No hay reportes recientes.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {reportesRecientes.map((r) => {
+                const est = estadoConfig[r.status] || estadoConfig['PENDING'];
+                return (
+                  <Link
+                    key={r.reportId}
+                    to={`/ciudadano/reportes/${r.reportId}`}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-[#f5f3f3] hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`${est.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                        {est.label}
+                      </span>
+                      <span className="text-[10px] text-[#737783]">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-CL') : '—'}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-[#1b1c1c] mb-1 line-clamp-2">{r.description}</p>
+                    <div className="flex items-center gap-1 text-[10px] text-[#737783]">
+                      <span className="material-symbols-outlined text-xs">location_on</span>
+                      <span className="truncate">{r.address || 'Sin dirección'}</span>
+                    </div>
+                    {r.category && (
+                      <span className="inline-block mt-2 text-[9px] font-bold bg-[#f0f4ff] text-[#003a7a] px-2 py-0.5 rounded-full">
+                        {r.category}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 
