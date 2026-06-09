@@ -5,11 +5,12 @@ import useAuthStore from '../../../store/authStore';
 import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 const estadoConfig = {
-  PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente' },
-  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso'   },
-  RESOLVED:    { label: 'Resuelto',   clase: 'badge-resuelto'  },
-  REJECTED:    { label: 'Rechazado',  clase: 'badge-rechazado' },
-  REOPENED:    { label: 'Reabierto',  clase: 'bg-purple-100 text-purple-700' },
+  PENDING:          { label: 'Pendiente',            clase: 'badge-pendiente' },
+  IN_PROGRESS:      { label: 'En Proceso',            clase: 'badge-proceso'   },
+  RESOLVED:         { label: 'Resuelto',              clase: 'badge-resuelto'  },
+  REJECTED:         { label: 'Rechazado',             clase: 'badge-rechazado' },
+  REOPENED:         { label: 'Reabierto',             clase: 'bg-purple-100 text-purple-700' },
+  REOPEN_REQUESTED: { label: 'Reapertura Solicitada', clase: 'bg-amber-100 text-amber-800'   },
 };
 
 const prioridadConfig = {
@@ -20,12 +21,13 @@ const prioridadConfig = {
 };
 
 const filtrosEstado = [
-  { label: 'Todos',      value: ''           },
-  { label: 'Pendientes', value: 'PENDING'     },
-  { label: 'En Proceso', value: 'IN_PROGRESS' },
-  { label: 'Resueltos',  value: 'RESOLVED'    },
-  { label: 'Rechazados', value: 'REJECTED'    },
-  { label: 'Reabiertos', value: 'REOPENED'    },
+  { label: 'Todos',                value: ''                 },
+  { label: 'Pendientes',           value: 'PENDING'          },
+  { label: 'En Proceso',           value: 'IN_PROGRESS'      },
+  { label: 'Resueltos',            value: 'RESOLVED'         },
+  { label: 'Rechazados',           value: 'REJECTED'         },
+  { label: 'Reabiertos',           value: 'REOPENED'         },
+  { label: 'Solicitud Reapertura', value: 'REOPEN_REQUESTED' },
 ];
 
 export default function MunicipalGestionReportes() {
@@ -164,7 +166,6 @@ export default function MunicipalGestionReportes() {
             </select>
           </div>
 
-          {/* Filtros de estado */}
           <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {filtrosEstado.map((f) => (
               <button
@@ -182,7 +183,6 @@ export default function MunicipalGestionReportes() {
           </div>
         </div>
 
-        {/* Estado carga / error */}
         {cargando && (
           <div className="flex items-center justify-center gap-3 py-16 text-[#424752]">
             <span className="material-symbols-outlined animate-spin">progress_activity</span>
@@ -198,7 +198,6 @@ export default function MunicipalGestionReportes() {
           </div>
         )}
 
-        {/* Tabla */}
         {!cargando && !error && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-[#f5f3f3]">
@@ -291,7 +290,6 @@ export default function MunicipalGestionReportes() {
               })}
             </div>
 
-            {/* Paginación */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-4 border-t border-[#f5f3f3]">
                 <button

@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useEffect } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -17,16 +18,28 @@ const createCustomIcon = (color, number) =>
     iconAnchor: [15, 15],
   });
 
+function FlyToLocation({ position }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(position, map.getZoom(), { duration: 0.8 });
+  }, [position[0], position[1]]);
+  return null;
+}
+
 export default function MapComponent({
   markers = [],
   center = [-33.426, -70.61],
   zoom = 14,
   height = '400px',
   draggablePin = false,
+  pinPosition = null,
+  onLocationChange = null,
 }) {
+  const position = pinPosition ?? center;
+
   return (
     <MapContainer
-      center={center}
+      center={position}
       zoom={draggablePin ? 16 : zoom}
       style={{ height, width: '100%' }}
       className="rounded-2xl border border-[#e4e2e2] shadow-sm"
@@ -37,9 +50,21 @@ export default function MapComponent({
         maxZoom={19}
       />
       {draggablePin && (
-        <Marker position={center} draggable={true}>
-          <Popup>Arrastra para ajustar ubicación</Popup>
-        </Marker>
+        <>
+          {pinPosition && <FlyToLocation position={pinPosition} />}
+          <Marker
+            position={position}
+            draggable={true}
+            eventHandlers={{
+              dragend: (e) => {
+                const { lat, lng } = e.target.getLatLng();
+                if (onLocationChange) onLocationChange(lat, lng);
+              },
+            }}
+          >
+            <Popup>Arrastra para ajustar ubicación</Popup>
+          </Marker>
+        </>
       )}
       {markers.map((marker, index) => (
         <Marker

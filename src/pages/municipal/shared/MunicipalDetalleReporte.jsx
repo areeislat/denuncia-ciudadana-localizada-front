@@ -5,10 +5,12 @@ import useAuthStore from '../../../store/authStore';
 import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 const estadoConfig = {
-  PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente' },
-  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso' },
-  RESOLVED:    { label: 'Resuelto',   clase: 'badge-resuelto' },
-  REJECTED:    { label: 'Rechazado',  clase: 'badge-rechazado' },
+  PENDING:          { label: 'Pendiente',            clase: 'badge-pendiente' },
+  IN_PROGRESS:      { label: 'En Proceso',            clase: 'badge-proceso'   },
+  RESOLVED:         { label: 'Resuelto',              clase: 'badge-resuelto'  },
+  REJECTED:         { label: 'Rechazado',             clase: 'badge-rechazado' },
+  REOPENED:         { label: 'Reabierto',             clase: 'badge-proceso'   },
+  REOPEN_REQUESTED: { label: 'Reapertura Solicitada', clase: 'bg-amber-100 text-amber-800 border border-amber-300' },
 };
 
 const prioridadConfig = {
@@ -18,7 +20,7 @@ const prioridadConfig = {
   CRITICAL: { label: 'Crítica', clase: 'bg-purple-100 text-purple-800'  },
 };
 
-const ESTADOS = ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'];
+const ESTADOS = ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'REJECTED', 'REOPENED'];
 
 export default function MunicipalDetalleReporte() {
   const { id } = useParams();
@@ -69,6 +71,24 @@ export default function MunicipalDetalleReporte() {
       setErrorPrioridad('No se pudo actualizar la prioridad. Intenta nuevamente.');
     } finally {
       setGuardandoPrioridad(false);
+    }
+  };
+
+  const handleRespuestaSolicitud = async (aprobar) => {
+    try {
+      setGuardando(true);
+      setErrorGuardar(null);
+      const data = await apiClient.patch(`/api/reports/${id}/status`, {
+        status: aprobar ? 'REOPENED' : 'RESOLVED',
+        comment: aprobar ? 'Solicitud de reapertura aprobada.' : 'Solicitud de reapertura rechazada.',
+      });
+      setReporte(data);
+      setNuevoEstado(data.status);
+      setExito(true);
+    } catch {
+      setErrorGuardar('No se pudo procesar la solicitud. Intenta nuevamente.');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -202,6 +222,43 @@ export default function MunicipalDetalleReporte() {
                 )}
               </div>
             </div>
+
+            {/* Banner solicitud de reapertura */}
+            {reporte.status === 'REOPEN_REQUESTED' && (() => {
+              const solicitud = [...(reporte.history || [])].reverse().find(h => h.reopenReason);
+              return (
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-5">
+                  <div className="flex items-start gap-3 mb-4">
+                    <span className="material-symbols-outlined text-amber-600 shrink-0">help</span>
+                    <div>
+                      <p className="font-headline font-bold text-amber-800 text-sm">El ciudadano solicita reabrir este reporte</p>
+                      {solicitud?.reopenReason && (
+                        <p className="text-amber-700 text-xs mt-1 italic">"{solicitud.reopenReason}"</p>
+                      )}
+                    </div>
+                  </div>
+                  {errorGuardar && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-4 py-3 mb-3">{errorGuardar}</div>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleRespuestaSolicitud(true)}
+                      disabled={guardando}
+                      className="flex-1 bg-[#003a7a] text-white font-headline font-bold py-2.5 rounded-xl text-sm hover:bg-[#0050A5] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">check_circle</span> Aprobar reapertura
+                    </button>
+                    <button
+                      onClick={() => handleRespuestaSolicitud(false)}
+                      disabled={guardando}
+                      className="flex-1 bg-white border border-[#c2c6d4] text-[#424752] font-headline font-bold py-2.5 rounded-xl text-sm hover:bg-[#f5f3f3] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">cancel</span> Rechazar solicitud
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Actualizar estado */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-[#f5f3f3]">
