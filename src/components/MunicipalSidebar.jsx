@@ -1,7 +1,9 @@
 // components/MunicipalSidebar.jsx
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
+import useNotificationStore from '../store/notificationStore';
+import NotificationDropdown from './NotificationDropdown';
 
 const navItems = (role) => {
   const base = [
@@ -29,9 +31,17 @@ const navItems = (role) => {
 
 export default function MunicipalSidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount, fetchNotifications } = useNotificationStore();
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const role = user?.roleName || 'MUNICIPAL_OFFICER';
   const items = navItems(role);
@@ -107,6 +117,21 @@ export default function MunicipalSidebar() {
         </nav>
 
         <div className="px-3 mt-auto">
+          <div className="relative mb-1">
+            <button
+              onClick={() => setNotifOpen((v) => !v)}
+              className="text-slate-400 hover:text-white px-2 py-2 flex items-center gap-2 text-sm w-full relative"
+            >
+              <span className="material-symbols-outlined text-lg">notifications</span>
+              Notificaciones
+              {unreadCount > 0 && (
+                <span className="ml-auto w-5 h-5 bg-[#D7141A] rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <NotificationDropdown open={notifOpen} onClose={() => setNotifOpen(false)} dropUp alignLeft />
+          </div>
           <button onClick={handleLogout} className="text-slate-400 hover:text-white px-2 py-2 flex items-center gap-2 text-sm w-full">
             <span className="material-symbols-outlined text-lg">logout</span>Cerrar Sesión
           </button>
@@ -122,7 +147,20 @@ export default function MunicipalSidebar() {
           <span className="text-lg font-extrabold text-white font-headline">DESIGEO</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-white">notifications</span>
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen((v) => !v)}
+              className="text-white p-1 relative"
+            >
+              <span className="material-symbols-outlined">notifications</span>
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-[#D7141A] rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <NotificationDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
+          </div>
           <div className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold">{initials}</div>
         </div>
       </header>
