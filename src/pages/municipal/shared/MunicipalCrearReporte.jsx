@@ -1,14 +1,13 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
-import apiClient from '../../config/api';
-import MapComponent from '../../components/MapComponent';
-import CiudadanoFooter from '../../components/CiudadanoFooter';
-import CiudadanoHeader from '../../components/CiudadanoHeader';
+import apiClient from '../../../config/api';
+import MapComponent from '../../../components/MapComponent';
+import MunicipalSidebar from '../../../components/MunicipalSidebar';
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
 
-export default function CiudadanoCrear() {
+export default function MunicipalCrearReporte() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ category: 'Bache / Pavimento', description: '', address: '' });
   const [coords, setCoords] = useState({ lat: -33.4569, lng: -70.6483 });
@@ -19,32 +18,6 @@ export default function CiudadanoCrear() {
   const [imagenes, setImagenes] = useState([]);
   const [procesandoFotos, setProcesandoFotos] = useState(false);
   const fileInputRef = useRef(null);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Dirección → pin (geocoding directo)
-  const handleBuscarDireccion = async () => {
-    if (!form.address.trim()) return;
-    setBuscando(true);
-    try {
-      const res = await fetch(
-        `${NOMINATIM}/search?q=${encodeURIComponent(form.address)}&format=json&limit=1&countrycodes=cl&addressdetails=1`
-      );
-      const data = await res.json();
-      if (data.length > 0) {
-        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
-        const addr = data[0].address || {};
-        setComunaNombre(addr.city || addr.municipality || addr.town || addr.county || '');
-      }
-    } catch {
-      // silencioso — el usuario puede seguir usando el mapa manualmente
-    } finally {
-      setBuscando(false);
-    }
-  };
 
   const handleAgregarFotos = async (e) => {
     const files = Array.from(e.target.files).slice(0, 5 - imagenes.length);
@@ -68,7 +41,31 @@ export default function CiudadanoCrear() {
     });
   };
 
-  // Pin → dirección (geocoding inverso)
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleBuscarDireccion = async () => {
+    if (!form.address.trim()) return;
+    setBuscando(true);
+    try {
+      const res = await fetch(
+        `${NOMINATIM}/search?q=${encodeURIComponent(form.address)}&format=json&limit=1&countrycodes=cl&addressdetails=1`
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        const addr = data[0].address || {};
+        setComunaNombre(addr.city || addr.municipality || addr.town || addr.county || '');
+      }
+    } catch {
+      // silencioso
+    } finally {
+      setBuscando(false);
+    }
+  };
+
   const handleLocationChange = async (lat, lng) => {
     setCoords({ lat, lng });
     try {
@@ -98,7 +95,7 @@ export default function CiudadanoCrear() {
         comunaNombre,
         images: imagenes.map((img) => img.base64),
       });
-      navigate('/ciudadano/reportes');
+      navigate('/municipal/gestion');
     } catch (err) {
       const msg = err.response?.data?.description?.[0] || err.response?.data?.message || 'Error al enviar el reporte.';
       setError(msg);
@@ -109,38 +106,21 @@ export default function CiudadanoCrear() {
 
   return (
     <div>
-      <CiudadanoHeader activePage="crear" />
+      <MunicipalSidebar />
 
-      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        <h1 className="font-headline text-2xl font-bold mb-1 text-[#003a7a]">Reportar un Problema</h1>
-        <p className="text-[#424752] text-sm mb-6">Completa los detalles para que podamos resolverlo.</p>
-
-        {/* Progress */}
-        <div className="flex items-center justify-between relative mb-8 max-w-md">
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-[#e4e2e2] -translate-y-1/2 z-0"></div>
-          <div className="absolute top-1/2 left-0 h-0.5 bg-[#0050A5] -translate-y-1/2 z-0" style={{ width: '50%' }}></div>
-          <div className="relative z-10 flex flex-col items-center gap-1">
-            <div className="w-8 h-8 rounded-full bg-[#0050A5] text-white flex items-center justify-center shadow-md">
-              <span className="material-symbols-outlined text-sm fill-icon">check</span>
-            </div>
-            <span className="text-[9px] font-bold text-[#003a7a] uppercase">Categoría</span>
-          </div>
-          <div className="relative z-10 flex flex-col items-center gap-1">
-            <div className="w-8 h-8 rounded-full bg-[#0050A5] text-white flex items-center justify-center ring-4 ring-[#d7e2ff] shadow-md">
-              <span className="text-xs font-bold">2</span>
-            </div>
-            <span className="text-[9px] font-bold text-[#003a7a] uppercase">Detalles</span>
-          </div>
-          <div className="relative z-10 flex flex-col items-center gap-1">
-            <div className="w-8 h-8 rounded-full bg-[#e4e2e2] text-[#424752] flex items-center justify-center">
-              <span className="text-xs font-bold">3</span>
-            </div>
-            <span className="text-[9px] font-bold text-[#424752] uppercase">Confirmar</span>
+      <main className="md:ml-60 p-4 md:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => navigate(-1)} className="text-[#424752] hover:text-[#1b1c1c]">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-[#1b1c1c] font-headline mb-1">Crear Reporte</h2>
+            <p className="text-[#424752] text-sm">Registra un nuevo problema en tu municipio.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
-          {/* Left: Form */}
+          {/* Formulario */}
           <div className="space-y-5">
             <div>
               <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-1.5">Categoría</label>
@@ -168,9 +148,9 @@ export default function CiudadanoCrear() {
                 minLength={10}
                 maxLength={1000}
                 className="w-full bg-[#e4e2e2] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#003a7a] text-sm"
-                rows="5"
+                rows="4"
                 placeholder="Describe el problema con al menos 10 caracteres..."
-              />
+              ></textarea>
               <p className="text-[10px] text-[#737783] mt-1">Mínimo 10 caracteres, máximo 1000.</p>
             </div>
             <div>
@@ -199,7 +179,6 @@ export default function CiudadanoCrear() {
               </div>
               <p className="text-[10px] text-[#737783] mt-1">Escribe y presiona buscar, o arrastra el pin en el mapa.</p>
             </div>
-
             <div>
               <div className="flex justify-between mb-2">
                 <span className="font-headline text-sm font-bold">Fotos de Evidencia</span>
@@ -254,16 +233,17 @@ export default function CiudadanoCrear() {
                   <>Enviar Reporte <span className="material-symbols-outlined text-sm">send</span></>
                 )}
               </button>
-              <Link
-                to="/ciudadano"
-                className="px-6 text-[#424752] font-headline font-bold py-4 rounded-xl hover:bg-[#f5f3f3] transition-colors flex items-center justify-center"
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="px-6 text-[#424752] font-headline font-bold py-4 rounded-xl hover:bg-[#f5f3f3] transition-colors"
               >
                 Cancelar
-              </Link>
+              </button>
             </div>
           </div>
 
-          {/* Right: Map */}
+          {/* Mapa */}
           <div>
             <label className="block font-headline text-sm font-bold text-[#1b1c1c] mb-2">Ubicación del Reporte</label>
             <MapComponent
@@ -287,8 +267,6 @@ export default function CiudadanoCrear() {
           </div>
         </form>
       </main>
-
-      <CiudadanoFooter />
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import MapComponent from '../../components/MapComponent';
 import useAuthStore from '../../store/authStore';
 import apiClient from '../../config/api';
 import CiudadanoFooter from '../../components/CiudadanoFooter';
+import CiudadanoHeader from '../../components/CiudadanoHeader';
 
 const mockMarkers = [
   { lat: -33.423, lng: -70.615, title: 'Bache en cruce peatonal', status: 'Pendiente', color: '#dc2626', n: 12 },
@@ -14,28 +15,21 @@ const mockMarkers = [
   { lat: -33.434, lng: -70.612, title: 'Basura ilegal', status: 'En Proceso', color: '#2563eb', n: 7 },
 ];
 
+const estadoConfig = {
+  PENDING:     { label: 'Pendiente',  clase: 'badge-pendiente' },
+  IN_PROGRESS: { label: 'En Proceso', clase: 'badge-proceso'   },
+  RESOLVED:    { label: 'Resuelto',   clase: 'badge-resuelto'  },
+  REJECTED:    { label: 'Rechazado',  clase: 'badge-rechazado' },
+};
+
 export default function CiudadanoHome() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [stats, setStats] = useState({ total: 0, pendientes: 0, resueltos: 0 });
+  const [reportesRecientes, setReportesRecientes] = useState([]);
 
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
 
-  // Extraer primer nombre desde fullName (ej: "María González" → "María")
   const firstName = user?.fullName?.split(' ')[0] || 'Ciudadano';
 
-  // Iniciales para el avatar (ej: "María González" → "MG")
-  const initials = user?.fullName
-    ? user.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
-    : '?';
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  // Fetch real stats from the Report Service
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -48,103 +42,26 @@ export default function CiudadanoHome() {
           resueltos: reportes.filter((r) => r.status === 'RESOLVED').length,
         });
       } catch {
-        // Si falla, dejar en 0
         setStats({ total: 0, pendientes: 0, resueltos: 0 });
       }
     };
+
+    const fetchFeed = async () => {
+      try {
+        const data = await apiClient.get('/api/reports?page=0&size=10');
+        setReportesRecientes(data.reports || []);
+      } catch {
+        // silencioso
+      }
+    };
+
     fetchStats();
+    fetchFeed();
   }, [user?.userId]);
 
   return (
     <div>
-      {/* HEADER */}
-      <header className="bg-[#001A33] sticky top-0 z-50 shadow-lg">
-        <div className="max-w-7xl mx-auto flex justify-between items-center px-4 md:px-6 py-4">
-          <Link to="/ciudadano" className="text-xl font-extrabold text-white tracking-tight font-headline">DESIGEO</Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/ciudadano" className="text-white font-headline font-bold text-sm border-b-2 border-[#D7141A] pb-1">Inicio</Link>
-            <Link to="/ciudadano/reportes" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Mis Reportes</Link>
-            <Link to="/ayuda" className="text-slate-300 hover:text-white font-headline font-bold text-sm">Ayuda</Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <button className="text-white hover:bg-white/10 rounded-md p-2">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <div className="relative">
-              <button
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="w-8 h-8 rounded-full bg-[#0050A5] flex items-center justify-center text-white text-xs font-bold hover:ring-2 hover:ring-white/30 transition-all"
-              >
-                {initials}
-              </button>
-              {profileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-[#e4e2e2] w-48 overflow-hidden z-50">
-                  <div className="px-4 py-3 border-b border-[#f5f3f3]">
-                    <p className="text-sm font-bold font-headline text-[#1b1c1c]">{user?.fullName}</p>
-                    <p className="text-[10px] text-[#424752] capitalize">{user?.roleName?.toLowerCase().replace('_', ' ')}</p>
-                  </div>
-                  <Link
-                    to="/ciudadano/perfil"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center gap-2 px-4 py-3 text-sm text-[#1b1c1c] hover:bg-[#f5f3f3] transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-lg">person</span>Mi Perfil
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#ba1a1a] hover:bg-[#f5f3f3] transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-lg">logout</span>Cerrar sesión
-                  </button>
-                </div>
-              )}
-            </div>
-            <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-white">
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile menu */}
-      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
-        <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)}></div>
-        <div className="mobile-menu-panel">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <p className="text-white font-headline font-bold">{user?.fullName}</p>
-              <p className="text-slate-400 text-xs capitalize">{user?.roleName?.toLowerCase().replace('_', ' ')}</p>
-            </div>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-white">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <nav className="space-y-1">
-            <Link to="/ciudadano" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-white font-headline font-medium py-3 px-4 rounded-lg bg-white/10">
-              <span className="material-symbols-outlined">home</span>Inicio
-            </Link>
-            <Link to="/ciudadano/crear" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
-              <span className="material-symbols-outlined">add_circle</span>Reportar
-            </Link>
-            <Link to="/ciudadano/reportes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
-              <span className="material-symbols-outlined">history</span>Mis Reportes
-            </Link>
-            <Link to="/ciudadano/perfil" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
-              <span className="material-symbols-outlined">person</span>Mi Perfil
-            </Link>
-            <Link to="/ayuda" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-slate-300 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5">
-              <span className="material-symbols-outlined">help</span>Ayuda
-            </Link>
-            <div className="border-t border-white/10 my-4"></div>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 text-red-400 font-headline font-medium py-3 px-4 rounded-lg hover:bg-white/5"
-            >
-              <span className="material-symbols-outlined">logout</span>Cerrar sesión
-            </button>
-          </nav>
-        </div>
-      </div>
+      <CiudadanoHeader activePage="inicio" />
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Greeting */}
@@ -203,11 +120,51 @@ export default function CiudadanoHome() {
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#16a34a] inline-block"></span> Resuelto</span>
           </div>
         </div>
+        {/* Reportes recientes de la comunidad */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-headline font-bold text-xl">Reportes Recientes</h2>
+            <span className="text-xs text-[#737783]">Últimos 10 de la comunidad</span>
+          </div>
+          {reportesRecientes.length === 0 ? (
+            <p className="text-sm text-[#424752] text-center py-8">No hay reportes recientes.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {reportesRecientes.map((r) => {
+                const est = estadoConfig[r.status] || estadoConfig['PENDING'];
+                return (
+                  <Link
+                    key={r.reportId}
+                    to={`/ciudadano/reportes/${r.reportId}`}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-[#f5f3f3] hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`${est.clase} text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                        {est.label}
+                      </span>
+                      <span className="text-[10px] text-[#737783]">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-CL') : '—'}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-[#1b1c1c] mb-1 line-clamp-2">{r.description}</p>
+                    <div className="flex items-center gap-1 text-[10px] text-[#737783]">
+                      <span className="material-symbols-outlined text-xs">location_on</span>
+                      <span className="truncate">{r.address || 'Sin dirección'}</span>
+                    </div>
+                    {r.category && (
+                      <span className="inline-block mt-2 text-[9px] font-bold bg-[#f0f4ff] text-[#003a7a] px-2 py-0.5 rounded-full">
+                        {r.category}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* FOOTER */}
       <CiudadanoFooter />
     </div>
   );
 }
-

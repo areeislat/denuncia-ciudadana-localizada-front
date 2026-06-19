@@ -17,10 +17,11 @@ import CiudadanoPerfil from './pages/ciudadano/CiudadanoPerfil';
 // Municipal shared
 import MunicipalDashboard from './pages/municipal/shared/MunicipalDashboard';
 import MunicipalGestionReportes from './pages/municipal/shared/MunicipalGestionReportes';
+import MunicipalCrearReporte from './pages/municipal/shared/MunicipalCrearReporte';
 import MunicipalDetalleReporte from './pages/municipal/shared/MunicipalDetalleReporte';
 
+
 // Municipal Officer
-import MunicipalGestionUsuarios from './pages/municipal/municipal_officer/MunicipalGestionUsuarios';
 
 // Admin Municipal
 import AdminGestionUsuarios from './pages/municipal/admin_municipal/AdminGestionUsuarios';
@@ -31,6 +32,10 @@ import AdminEstadisticas from './pages/municipal/admin_municipal/AdminEstadistic
 import SuperGestionUsuarios from './pages/municipal/super_admin/SuperGestionUsuarios';
 import SuperGestionMunicipalidades from './pages/municipal/super_admin/SuperGestionMunicipalidades';
 import SuperAuditoriaLogs from './pages/municipal/super_admin/SuperAuditoriaLogs';
+import SuperConfiguracion from './pages/municipal/super_admin/SuperConfiguracion';
+import SuperEstadisticas from './pages/municipal/super_admin/SuperEstadisticas';
+import SuperGestionReportes from './pages/municipal/super_admin/SuperGestionReportes';
+
 
 import useAuthStore from './store/authStore';
 
@@ -62,9 +67,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar" element={<Recuperar />} />
+        <Route path="/ayuda" element={<Ayuda />} />
         <Route path="/terminos" element={<TerminosYPrivacidad />} />
         <Route path="/transparencia" element={<Transparencia />} />
-        <Route path="/ayuda" element={<Ayuda />} />
 
         {/* ── CIUDADANO ── */}
         <Route path="/ciudadano" element={
@@ -90,14 +95,13 @@ function App() {
         <Route path="/municipal/gestion" element={
           <PrivateRoute roles={MUNICIPALES}><MunicipalGestionReportes /></PrivateRoute>
         } />
+        <Route path="/municipal/gestion/crear" element={
+          <PrivateRoute roles={MUNICIPALES}><MunicipalCrearReporte /></PrivateRoute>
+        } />
         <Route path="/municipal/gestion/:id" element={
           <PrivateRoute roles={MUNICIPALES}><MunicipalDetalleReporte /></PrivateRoute>
         } />
 
-        {/* ── MUNICIPAL OFFICER ── */}
-        <Route path="/municipal/usuarios" element={
-          <PrivateRoute roles={[ROLES.OFFICER]}><MunicipalGestionUsuarios /></PrivateRoute>
-        } />
 
         {/* ── ADMIN MUNICIPAL ── */}
         <Route path="/admin/usuarios" element={
@@ -119,6 +123,15 @@ function App() {
         } />
         <Route path="/super/auditoria" element={
           <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperAuditoriaLogs /></PrivateRoute>
+        } />
+        <Route path="/super/configuracion" element={
+          <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperConfiguracion /></PrivateRoute>
+        } />
+        <Route path="/super/estadisticas" element={
+          <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperEstadisticas /></PrivateRoute>
+        } />
+        <Route path="/super/reportes" element={
+        <PrivateRoute roles={[ROLES.SUPER_ADMIN]}><SuperGestionReportes /></PrivateRoute>
         } />
 
         {/* Fallback */}
