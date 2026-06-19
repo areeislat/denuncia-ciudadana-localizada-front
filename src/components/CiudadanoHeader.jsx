@@ -1,12 +1,22 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
+import useNotificationStore from '../store/notificationStore';
+import NotificationDropdown from './NotificationDropdown';
 
 export default function CiudadanoHeader({ activePage = '' }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { unreadCount, fetchNotifications } = useNotificationStore();
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -41,9 +51,20 @@ export default function CiudadanoHeader({ activePage = '' }) {
             <span className="font-headline font-bold text-sm text-slate-500 cursor-not-allowed">Ayuda</span>
           </nav>
           <div className="flex items-center gap-3">
-            <button className="text-white hover:bg-white/10 rounded-md p-2">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen((v) => !v)}
+                className="text-white hover:bg-white/10 rounded-md p-2 relative"
+              >
+                <span className="material-symbols-outlined">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-[#D7141A] rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <NotificationDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
+            </div>
             <div className="relative">
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}

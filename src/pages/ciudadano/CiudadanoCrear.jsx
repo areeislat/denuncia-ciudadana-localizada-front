@@ -15,6 +15,7 @@ export default function CiudadanoCrear() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [buscando, setBuscando] = useState(false);
+  const [comunaNombre, setComunaNombre] = useState('');
   const [imagenes, setImagenes] = useState([]);
   const [procesandoFotos, setProcesandoFotos] = useState(false);
   const fileInputRef = useRef(null);
@@ -30,11 +31,13 @@ export default function CiudadanoCrear() {
     setBuscando(true);
     try {
       const res = await fetch(
-        `${NOMINATIM}/search?q=${encodeURIComponent(form.address)}&format=json&limit=1&countrycodes=cl`
+        `${NOMINATIM}/search?q=${encodeURIComponent(form.address)}&format=json&limit=1&countrycodes=cl&addressdetails=1`
       );
       const data = await res.json();
       if (data.length > 0) {
         setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        const addr = data[0].address || {};
+        setComunaNombre(addr.city || addr.municipality || addr.town || addr.county || '');
       }
     } catch {
       // silencioso — el usuario puede seguir usando el mapa manualmente
@@ -73,6 +76,8 @@ export default function CiudadanoCrear() {
       const data = await res.json();
       if (data.display_name) {
         setForm((prev) => ({ ...prev, address: data.display_name }));
+        const addr = data.address || {};
+        setComunaNombre(addr.city || addr.municipality || addr.town || addr.county || '');
       }
     } catch {
       // silencioso
@@ -90,6 +95,7 @@ export default function CiudadanoCrear() {
         latitude: coords.lat,
         longitude: coords.lng,
         address: form.address,
+        comunaNombre,
         images: imagenes.map((img) => img.base64),
       });
       navigate('/ciudadano/reportes');
