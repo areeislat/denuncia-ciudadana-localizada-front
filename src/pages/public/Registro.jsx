@@ -16,7 +16,8 @@ export default function Registro() {
     aceptaTerminos: false,
   });
 
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -27,11 +28,58 @@ export default function Registro() {
 
   const handleRegistrarOtro = () => {
     setForm(FORM_INICIAL);
+    setFieldErrors({});
     setShowModal(false);
   };
 
+  const validate = () => {
+    const errs = {};
+
+    if (!form.fullName.trim()) {
+      errs.fullName = 'El nombre completo es requerido.';
+    }
+
+    if (!form.rut.trim()) {
+      errs.rut = 'El RUT es requerido.';
+    }
+
+    if (!form.email.trim()) {
+      errs.email = 'El email es requerido.';
+    }
+
+    if (!form.password) {
+      errs.password = 'La contraseña es requerida.';
+    } else if (/\s/.test(form.password)) {
+      errs.password = 'La contraseña no puede contener espacios.';
+    } else if (form.password.length < 8) {
+      errs.password = 'La contraseña debe tener al menos 8 caracteres.';
+    }
+
+    if (!form.confirmPassword) {
+      errs.confirmPassword = 'Confirmá tu contraseña.';
+    } else if (form.password !== form.confirmPassword) {
+      errs.confirmPassword = 'Las contraseñas no coinciden.';
+    }
+
+    if (!form.aceptaTerminos) {
+      errs.aceptaTerminos = 'Debés aceptar los Términos de Uso y la Política de Privacidad.';
+    }
+
+    return errs;
+  };
+
+  const inputClass = (field) =>
+    `block w-full pl-11 pr-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 text-sm border ${
+      fieldErrors[field]
+        ? 'bg-red-50 border-red-300 focus:ring-red-300'
+        : 'bg-[#e4e2e2] border-transparent focus:ring-[#003a7a]'
+    }`;
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: '' }));
+    }
     if (name === 'rut') {
       // Auto-formatear RUT: máximo 9 caracteres (8 dígitos + 1 dígito verificador K o número)
       const clean = value.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
@@ -67,21 +115,11 @@ export default function Registro() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setServerError('');
 
-    // Validaciones básicas
-    if (!form.aceptaTerminos) {
-      setError('Debes aceptar los Términos de Uso y la Política de Privacidad.');
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Las contraseñas no coinciden.');
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
-      return;
-    }
+    const errs = validate();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
     try {
@@ -100,7 +138,7 @@ export default function Registro() {
       navigate('/login');
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al crear la cuenta. Intenta nuevamente.';
-      setError(msg);
+      setServerError(msg);
     } finally {
       setLoading(false);
     }
@@ -178,12 +216,14 @@ export default function Registro() {
                   name="fullName"
                   value={form.fullName}
                   onChange={handleChange}
-                  required
-                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  className={inputClass('fullName')}
                   placeholder="Ej: María González Torres"
                   type="text"
                 />
               </div>
+              {fieldErrors.fullName && (
+                <p className="text-red-600 text-xs mt-1 ml-1">{fieldErrors.fullName}</p>
+              )}
             </div>
 
             <div>
@@ -198,13 +238,16 @@ export default function Registro() {
                   name="rut"
                   value={form.rut}
                   onChange={handleChange}
-                  required
-                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  className={inputClass('rut')}
                   placeholder="12.345.678-9"
                   type="text"
                 />
               </div>
-              <p className="text-[10px] text-[#737783] mt-1 ml-1">Formato: XX.XXX.XXX-X</p>
+              {fieldErrors.rut ? (
+                <p className="text-red-600 text-xs mt-1 ml-1">{fieldErrors.rut}</p>
+              ) : (
+                <p className="text-[10px] text-[#737783] mt-1 ml-1">Formato: XX.XXX.XXX-X</p>
+              )}
             </div>
 
             <div>
@@ -219,12 +262,14 @@ export default function Registro() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  required
-                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  className={inputClass('email')}
                   placeholder="nombre@ejemplo.cl"
                   type="email"
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-red-600 text-xs mt-1 ml-1">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -239,7 +284,7 @@ export default function Registro() {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003a7a] text-sm"
                   placeholder="+56 9 1234 5678"
                   type="tel"
                 />
@@ -258,12 +303,14 @@ export default function Registro() {
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  required
-                  className="block w-full pl-11 pr-10 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
-                  placeholder="Mínimo 8 caracteres"
+                  className={inputClass('password').replace('pr-4', 'pr-10')}
+                  placeholder="Mínimo 8 caracteres, sin espacios"
                   type="password"
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="text-red-600 text-xs mt-1 ml-1">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div>
@@ -278,38 +325,44 @@ export default function Registro() {
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  required
-                  className="block w-full pl-11 pr-4 py-3.5 bg-[#e4e2e2] border-none rounded-xl focus:ring-2 focus:ring-[#003a7a] text-sm"
+                  className={inputClass('confirmPassword')}
                   placeholder="Repite tu contraseña"
                   type="password"
                 />
               </div>
+              {fieldErrors.confirmPassword && (
+                <p className="text-red-600 text-xs mt-1 ml-1">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
 
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                name="aceptaTerminos"
-                checked={form.aceptaTerminos}
-                onChange={handleChange}
-                className="mt-1 accent-[#0050A5] w-4 h-4 rounded"
-              />
-              <span className="text-xs text-[#424752]">
-                Acepto los{' '}
-                <a href="#" className="text-[#003a7a] font-bold hover:underline">
-                  Términos de Uso
-                </a>{' '}
-                y la{' '}
-                <a href="#" className="text-[#003a7a] font-bold hover:underline">
-                  Política de Privacidad
-                </a>
-              </span>
-            </label>
+            <div>
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="aceptaTerminos"
+                  checked={form.aceptaTerminos}
+                  onChange={handleChange}
+                  className="mt-1 accent-[#0050A5] w-4 h-4 rounded"
+                />
+                <span className="text-xs text-[#424752]">
+                  Acepto los{' '}
+                  <a href="#" className="text-[#003a7a] font-bold hover:underline">
+                    Términos de Uso
+                  </a>{' '}
+                  y la{' '}
+                  <a href="#" className="text-[#003a7a] font-bold hover:underline">
+                    Política de Privacidad
+                  </a>
+                </span>
+              </label>
+              {fieldErrors.aceptaTerminos && (
+                <p className="text-red-600 text-xs mt-1 ml-1">{fieldErrors.aceptaTerminos}</p>
+              )}
+            </div>
 
-            {/* Mensaje de error */}
-            {error && (
+            {serverError && (
               <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-4 py-3">
-                {error}
+                {serverError}
               </div>
             )}
 
